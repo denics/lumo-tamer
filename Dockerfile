@@ -27,24 +27,27 @@ RUN CGO_ENABLED=0 go build -o proton-auth
 # ============================================================================
 FROM base AS builder
 
+RUN apk add --no-cache python3 py3-setuptools make g++ libc6-compat \
+    cairo-dev pango-dev jpeg-dev giflib-dev librsvg-dev
+
 # Install all dependencies (including dev dependencies for building)
 RUN npm ci
 
 # Copy source code
 COPY src ./src
+COPY packages ./packages
 
-# Build TypeScript
-RUN npm run build
+# Build TypeScript, then prune dev dependencies
+RUN npm run build && npm prune --production
 
 # ============================================================================
 # Final stage
 # ============================================================================
 FROM base
 
-# Install production dependencies and clean cache
-RUN npm ci --only=production && npm cache clean --force
 
-# Copy compiled TypeScript from builder
+# Copy production node_modules and compiled TypeScript from builder
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
 # Copy config defaults (required at runtime)
