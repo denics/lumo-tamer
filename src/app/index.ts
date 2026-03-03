@@ -7,7 +7,7 @@
 
 import { getConversationsConfig, authConfig, mockConfig } from './config.js';
 import { logger } from './logger.js';
-import { resolveProjectPath } from './paths.js';
+import { getVaultPath } from './paths.js';
 import { LumoClient } from '../lumo-client/index.js';
 import { createAuthProvider, AuthManager, type AuthProvider, type ProtonApi } from '../auth/index.js';
 import { getConversationStore, getFallbackStore, setConversationStore, type ConversationStore, initializeSync, initializeConversationStore, FallbackStore } from '../conversations/index.js';
@@ -73,7 +73,7 @@ export class Application implements AppContext {
     this.authProvider = await createAuthProvider();
 
     // Create AuthManager with auto-refresh configuration
-    const vaultPath = resolveProjectPath(authConfig.vault.path);
+    const vaultPath = getVaultPath();
     const autoRefreshConfig = authConfig.autoRefresh;
 
     this.authManager = new AuthManager({
