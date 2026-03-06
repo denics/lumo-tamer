@@ -5,8 +5,7 @@
  * Install early in application startup before importing upstream modules.
  */
 
-import { logger } from '../app/logger.js';
-import { Level } from 'pino';
+import type { Logger, Level } from 'pino';
 
 const originalConsole = { ...console };
 
@@ -51,8 +50,8 @@ const suppressApiErrorRegex = new RegExp(`^(?:${suppressApiErrors.join('|')})`);
 // Default: true (show errors until app tells us about login/rclone auth which lack lumo scope)
 let fullApiErrorsSuppressed = false;
 
-export function suppressFullApiErrors(suppres = true): void {
-    fullApiErrorsSuppressed = suppres;
+export function suppressFullApiErrors(suppress = true): void {
+    fullApiErrorsSuppressed = suppress;
 }
 
 type EE = unknown[] & { error?: Error };
@@ -81,28 +80,31 @@ function minimal(ee: EE){
     }
 }
 
-function log(levelOrLog: Level | 'log', args: unknown[]) {
-    const ee = extractError(args);
-    const first = ee[0];
-    let level = (levelOrLog == 'log') ? 'debug' : levelOrLog;
+function createLogFunction(logger: Logger) {
+    return function log(levelOrLog: Level | 'log', args: unknown[]) {
+        const ee = extractError(args);
+        const first = ee[0];
+        let level = (levelOrLog == 'log') ? 'debug' : levelOrLog;
 
-    if(fullApiErrorsSuppressed && ee?.error?.message && suppressApiErrorRegex.test(ee.error.message))
-        level = 'trace';
-
-    if (typeof first == 'string') {
-        ee.shift()
-        if (    (levelOrLog == 'log' && suppressLogRegex.test(first))
-            ||  (fullApiErrorsSuppressed && levelOrLog == 'error' && suppressApiErrorRegex.test(first))
-        )
+        if(fullApiErrorsSuppressed && ee?.error?.message && suppressApiErrorRegex.test(ee.error.message))
             level = 'trace';
-        logger[level](minimal(ee), first);
-    }
-    else {
-        logger[level](minimal(ee));
-    }
+
+        if (typeof first == 'string') {
+            ee.shift()
+            if (    (levelOrLog == 'log' && suppressLogRegex.test(first))
+                ||  (fullApiErrorsSuppressed && levelOrLog == 'error' && suppressApiErrorRegex.test(first))
+            )
+                level = 'trace';
+            logger[level](minimal(ee), first);
+        }
+        else {
+            logger[level](minimal(ee));
+        }
+    };
 }
 
-export function installConsoleShim(): void {
+export function installConsoleShim(logger: Logger): void {
+    const log = createLogFunction(logger);
     const levels = ['log', 'debug', 'info', 'warn', 'error'] as const;
     for (const level of levels) {
         console[level] = (...args) => { log(level, args) };
@@ -110,7 +112,6 @@ export function installConsoleShim(): void {
     console.assert = (condition, ...args) => {
         if (!condition) logger.error({ args }, 'Assertion failed');
     };
-
 }
 
 export function restoreConsole(): void {
