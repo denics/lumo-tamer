@@ -15,13 +15,12 @@ import { createModelsRouter } from '../../src/api/routes/models.js';
 import { RequestQueue } from '../../src/api/queue.js';
 import { LumoClient } from '../../src/lumo-client/index.js';
 import { createMockProtonApi } from '../../src/mock/mock-api.js';
-import { FallbackStore } from '../../src/conversations/fallback/store.js';
+import { MinimalStore, type IConversationStore } from '../../src/conversations/index.js';
 import { MetricsService, setMetrics } from '../../src/app/metrics.js';
 import { setupMetricsMiddleware } from '../../src/api/middleware.js';
 import { createMetricsRouter } from '../../src/api/routes/metrics.js';
 import type { EndpointDependencies } from '../../src/api/types.js';
 import type { MockConfig } from '../../src/app/config.js';
-import { ConversationStore } from '../../src/conversations/store.js';
 
 type Scenario = MockConfig['scenario'];
 
@@ -34,7 +33,7 @@ export interface TestServer {
   server: Server;
   baseUrl: string;
   deps: EndpointDependencies;
-  store: ConversationStore;
+  store: IConversationStore;
   /** MetricsService instance (only if metrics option was true) */
   metrics?: MetricsService;
   close: () => Promise<void>;
@@ -53,7 +52,7 @@ export async function createTestServer(
 ): Promise<TestServer> {
   const mockApi = createMockProtonApi(scenario);
   const lumoClient = new LumoClient(mockApi, { enableEncryption: false });
-  const store = new FallbackStore();
+  const store = new MinimalStore();
   const queue = new RequestQueue(1);
 
   const deps: EndpointDependencies = {

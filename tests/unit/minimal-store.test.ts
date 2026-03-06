@@ -1,20 +1,20 @@
 /**
- * Unit tests for FallbackStore (in-memory conversation store)
+ * Unit tests for MinimalStore (in-memory conversation store)
  *
- * Tests in-memory conversation management, LRU eviction,
+ * Tests in-memory conversation management,
  * message deduplication, and Turn conversion.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { FallbackStore } from '../../src/conversations/fallback/store.js';
+import { MinimalStore } from '../../src/conversations/index.js';
 
-let store: FallbackStore;
+let store: MinimalStore;
 
 beforeEach(() => {
-  store = new FallbackStore();
+  store = new MinimalStore();
 });
 
-describe('FallbackStore', () => {
+describe('MinimalStore', () => {
   describe('getOrCreate', () => {
     it('creates new conversation when none exists', () => {
       const state = store.getOrCreate('conv-1');
@@ -29,11 +29,6 @@ describe('FallbackStore', () => {
       first.title = 'Modified';
       const second = store.getOrCreate('conv-1');
       expect(second.title).toBe('Modified');
-    });
-
-    it('marks new conversations as dirty', () => {
-      const state = store.getOrCreate('conv-1');
-      expect(state.dirty).toBe(true);
     });
   });
 
@@ -112,15 +107,6 @@ describe('FallbackStore', () => {
       expect(state.status).toBe('completed');
     });
 
-    it('marks conversation dirty', () => {
-      store.getOrCreate('conv-1');
-      store.markSynced('conv-1');
-      expect(store.get('conv-1')!.dirty).toBe(false);
-
-      store.appendAssistantResponse('conv-1', { content: 'Response' });
-      expect(store.get('conv-1')!.dirty).toBe(true);
-    });
-
     it('sets parentId to last message', () => {
       const [userMsg] = store.appendMessages('conv-1', [
         { role: 'user', content: 'Hi' },
@@ -167,84 +153,36 @@ describe('FallbackStore', () => {
     });
   });
 
-  describe('LRU eviction', () => {
-    // Note: MAX_CONVERSATIONS is hardcoded to 100, so eviction tests would need 101+ conversations
-    // These tests verify the LRU tracking mechanism works, not the actual eviction threshold
-
-    it('evicts least recently used when max exceeded', () => {
-      // Create 100 conversations (at max)
-      for (let i = 0; i < 100; i++) {
-        const state = store.getOrCreate(`conv-${i}`);
-        store.markSynced(`conv-${i}`);  // Mark clean so they can be evicted
-        state.dirty = false;
-      }
-
-      // Access conv-0 to make it most recent
-      store.get('conv-0');
-
-      // Add 101st conversation, should evict conv-1 (oldest non-recently-used)
-      store.getOrCreate('conv-100');
-      store.markSynced('conv-100');
-
-      expect(store.has('conv-0')).toBe(true);   // accessed recently
-      expect(store.has('conv-1')).toBe(false);   // evicted (LRU)
-      expect(store.has('conv-100')).toBe(true);  // just created
-    });
-
-    it('skips dirty conversations during eviction', () => {
-      // Create 100 conversations, all clean except conv-1
-      for (let i = 0; i < 100; i++) {
-        store.getOrCreate(`conv-${i}`);
-        if (i !== 1) {
-          store.markSynced(`conv-${i}`);
-          store.get(`conv-${i}`)!.dirty = false;
-        }
-      }
-
-      // Add 101st: conv-0 is LRU but let's check dirty skipping
-      // conv-0 should be evicted since it's clean
-      store.getOrCreate('conv-100');
-
-      expect(store.has('conv-1')).toBe(true);  // dirty, not evicted
-    });
-  });
-
-
-  describe('setTitle', () => {
-    it('updates title and marks dirty', () => {
+  describe('no-op methods', () => {
+    it('setTitle is no-op', () => {
       store.getOrCreate('conv-1');
-      store.markSynced('conv-1');
-      store.get('conv-1')!.dirty = false;
-
       store.setTitle('conv-1', 'My Chat');
-      expect(store.get('conv-1')!.title).toBe('My Chat');
-      expect(store.get('conv-1')!.dirty).toBe(true);
+      // Title not stored - still default
+      expect(store.get('conv-1')!.title).toBe('New Conversation');
     });
-  });
 
-  describe('delete', () => {
-    it('removes conversation', () => {
+    it('delete returns false', () => {
       store.getOrCreate('conv-1');
-      expect(store.delete('conv-1')).toBe(true);
-      expect(store.has('conv-1')).toBe(false);
+      expect(store.delete('conv-1')).toBe(false);
+      // Conversation still exists
+      expect(store.has('conv-1')).toBe(true);
     });
 
-    it('returns false for non-existent conversation', () => {
-      expect(store.delete('nonexistent')).toBe(false);
-    });
-  });
-
-  describe('getStats', () => {
-    it('returns correct statistics', () => {
+    it('entries yields nothing', () => {
       store.getOrCreate('conv-1');
-      store.getOrCreate('conv-2');
-      store.markSynced('conv-1');
-      store.get('conv-1')!.dirty = false;
+      const entries = [...store.entries()];
+      expect(entries).toEqual([]);
+    });
 
-      const stats = store.getStats();
-      expect(stats.total).toBe(2);
-      expect(stats.dirty).toBe(1);  // conv-2 is dirty
-      expect(stats.maxSize).toBe(100);  // hardcoded MAX_CONVERSATIONS
+    it('getMessage returns undefined', () => {
+      store.appendMessages('conv-1', [{ role: 'user', content: 'Hi' }]);
+      expect(store.getMessage('conv-1', 'any-message-id')).toBeUndefined();
+    });
+
+    it('createFromTurns returns empty', () => {
+      const result = store.createFromTurns([{ role: 'user', content: 'Hi' }]);
+      expect(result.conversationId).toBe('');
+      expect(result.title).toBe('');
     });
   });
 });

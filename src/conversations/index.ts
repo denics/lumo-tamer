@@ -3,7 +3,7 @@
  *
  * Provides:
  * - ConversationStore: Primary storage using Redux + IndexedDB
- * - FallbackStore: Legacy in-memory storage (deprecated)
+ * - MinimalStore: Lightweight in-memory storage for CLI/tests
  * - Message deduplication for OpenAI API format
  * - Types compatible with Proton Lumo webclient
  */
@@ -23,8 +23,14 @@ export type {
     MessageForStore,
 } from './types.js';
 
+// Store interface
+export type { IConversationStore } from './store-interface.js';
+
 // Primary store
 export { ConversationStore } from './store.js';
+
+// Minimal store (fallback for CLI/tests)
+export { MinimalStore } from './minimal-store.js';
 
 // Store initialization
 export {
@@ -51,23 +57,6 @@ export {
     type KeyManagerConfig,
 } from './key-manager.js';
 
-// Fallback store and its sync (deprecated)
-export {
-    FallbackStore,
-    getFallbackStore,
-    resetFallbackStore,
-} from './fallback/index.js';
-
-export {
-    SyncService,
-    getSyncService,
-    resetSyncService,
-    type SyncServiceConfig,
-    AutoSyncService,
-    getAutoSyncService,
-    resetAutoSyncService,
-} from './fallback/index.js';
-
 // Re-export LumoApi types for consumers
 export { LumoApi } from '@lumo/remote/api.js';
 export { RoleInt, StatusInt } from '@lumo/remote/types.js';
@@ -80,9 +69,8 @@ import { logger } from '../app/logger.js';
 import type { AuthProvider, ProtonApi } from '../auth/index.js';
 import type { ConversationsConfig } from '../app/config.js';
 import { getKeyManager } from './key-manager.js';
-import { getSyncService, getAutoSyncService, getFallbackStore } from './fallback/index.js';
-import { ConversationStore } from './store.js';
 import { initializeStore, type StoreResult } from './init.js';
+import type { IConversationStore } from './store-interface.js';
 
 // ============================================================================
 // Conversation Store Initialization
@@ -105,39 +93,31 @@ export interface InitializeStoreResult {
 // Module-level state to track store result for sync initialization
 let primaryStoreResult: StoreResult | null = null;
 
-// Singleton for the active store (either ConversationStore or FallbackStore)
-let activeStore: ConversationStore | ReturnType<typeof getFallbackStore> | null = null;
+// Singleton for the active store
+let activeStore: IConversationStore | null = null;
 
 /**
  * Initialize the conversation store
  *
- * Creates either the primary ConversationStore (Redux + IndexedDB) or
- * the fallback in-memory FallbackStore.
+ * Creates the primary ConversationStore (Redux + IndexedDB) if possible.
+ * Returns undefined if initialization fails - callers should handle this
+ * gracefully (server works stateless, CLI creates MinimalStore).
  *
- * Primary store is used when:
- * - useFallbackStore config is false (default)
- * - Auth provider supports persistence (browser auth)
+ * Primary store requires:
+ * - Auth provider supports persistence (has cached encryption keys)
  * - keyPassword is available (for master key decryption)
  */
 export async function initializeConversationStore(
     options: InitializeStoreOptions
 ): Promise<InitializeStoreResult> {
-    const { protonApi, uid, authProvider, conversationsConfig } = options;
+    const { authProvider } = options;
 
-    // Check if fallback is explicitly requested
-    if (conversationsConfig.useFallbackStore) {
-        logger.info('Using fallback store (explicitly configured)');
-        activeStore = getFallbackStore();
-        return { isPrimary: false };
-    }
-
-    // Try to initialize primary store
+    // Check prerequisites for primary store
     if (!authProvider.supportsPersistence()) {
         logger.warn(
             { method: authProvider.method },
-            'Primary store requires cached encryption keys. Falling back to in-memory store.'
+            'Primary store requires encryption keys. Continuing without store.'
         );
-        activeStore = getFallbackStore();
         return { isPrimary: false };
     }
 
@@ -145,9 +125,8 @@ export async function initializeConversationStore(
     if (!keyPassword) {
         logger.warn(
             { method: authProvider.method },
-            'Primary store requires keyPassword. Falling back to in-memory store.'
+            'Primary store requires keyPassword. Continuing without store.'
         );
-        activeStore = getFallbackStore();
         return { isPrimary: false };
     }
 
@@ -162,11 +141,9 @@ export async function initializeConversationStore(
         }
     } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        logger.error({ error: msg }, 'Failed to initialize primary store. Falling back to in-memory store.');
+        logger.error({ error: msg }, 'Failed to initialize primary store. Continuing without store.');
     }
 
-    // Fallback
-    activeStore = getFallbackStore();
     return { isPrimary: false };
 }
 
@@ -216,20 +193,17 @@ async function initializePrimaryStore(
 /**
  * Get the active conversation store
  *
- * Returns whichever store was initialized (primary or fallback).
- * Throws if no store has been initialized.
+ * Returns the initialized store, or undefined if no store is available.
+ * Callers should handle undefined gracefully (stateless mode).
  */
-export function getConversationStore(): ConversationStore | ReturnType<typeof getFallbackStore> {
-    if (!activeStore) {
-        throw new Error('ConversationStore not initialized - call initializeConversationStore() first');
-    }
-    return activeStore;
+export function getConversationStore(): IConversationStore | undefined {
+    return activeStore ?? undefined;
 }
 
 /**
- * Set the active conversation store (for mock mode)
+ * Set the active conversation store (for mock mode or CLI fallback)
  */
-export function setConversationStore(store: ConversationStore | ReturnType<typeof getFallbackStore>): void {
+export function setConversationStore(store: IConversationStore): void {
     activeStore = store;
 }
 
@@ -261,16 +235,22 @@ export interface InitializeSyncResult {
 /**
  * Initialize sync services
  *
- * For primary store: sync is handled automatically by Redux sagas.
- * For fallback store: sets up SyncService and AutoSyncService.
+ * Sync is handled automatically by Redux sagas when primary store is active.
+ * Returns initialized: false if no primary store or sync is disabled.
  */
 export async function initializeSync(
     options: InitializeSyncOptions
 ): Promise<InitializeSyncResult> {
-    const { protonApi, uid, authProvider, conversationsConfig } = options;
+    const { authProvider, conversationsConfig } = options;
 
     if (!conversationsConfig?.enableSync) {
         logger.info('Sync is disabled, skipping sync initialization');
+        return { initialized: false };
+    }
+
+    // Sync requires primary store (sagas handle sync)
+    if (!primaryStoreResult) {
+        logger.info('No primary store - sync not available');
         return { initialized: false };
     }
 
@@ -283,80 +263,12 @@ export async function initializeSync(
         return { initialized: false };
     }
 
-    const keyPassword = authProvider.getKeyPassword();
-    if (!keyPassword) {
-        logger.warn(
-            { method: authProvider.method },
-            'No keyPassword available - sync will not be initialized'
-        );
-        return { initialized: false };
-    }
-
-    try {
-        // Primary store: sync is handled by sagas
-        if (primaryStoreResult) {
-            logger.info(
-                { method: authProvider.method },
-                'Sync initialized (handled by sagas)'
-            );
-            return {
-                initialized: true,
-                storeResult: primaryStoreResult,
-            };
-        }
-
-        // Fallback store: use SyncService + AutoSyncService
-        const cachedUserKeys = authProvider.getCachedUserKeys?.();
-        const cachedMasterKeys = authProvider.getCachedMasterKeys?.();
-
-        logger.info(
-            {
-                method: authProvider.method,
-                hasCachedUserKeys: !!cachedUserKeys,
-                hasCachedMasterKeys: !!cachedMasterKeys,
-            },
-            'Initializing KeyManager for fallback sync...'
-        );
-
-        // Initialize KeyManager (needed for fallback sync)
-        const keyManager = getKeyManager({
-            protonApi,
-            cachedUserKeys,
-            cachedMasterKeys,
-        });
-
-        await keyManager.initialize(keyPassword);
-
-        // Initialize SyncService
-        const syncService = getSyncService({
-            uid,
-            keyManager,
-            spaceName: conversationsConfig.projectName,
-        });
-
-        // Eagerly fetch/create space
-        try {
-            await syncService.getOrCreateSpace();
-            logger.info({ method: authProvider.method }, 'Fallback sync service initialized');
-        } catch (spaceError) {
-            const msg = spaceError instanceof Error ? spaceError.message : String(spaceError);
-            logger.warn({ error: msg }, 'getOrCreateSpace failed');
-        }
-
-        // Initialize auto-sync
-        const autoSync = getAutoSyncService(syncService, true);
-
-        // Connect to fallback store
-        const store = getFallbackStore();
-        store.setOnDirtyCallback(() => autoSync.notifyDirty());
-
-        logger.info('Auto-sync enabled for fallback store');
-
-        return { initialized: true };
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const errorStack = error instanceof Error ? error.stack : undefined;
-        logger.error({ errorMessage, errorStack }, 'Failed to initialize sync service');
-        return { initialized: false };
-    }
+    logger.info(
+        { method: authProvider.method },
+        'Sync initialized (handled by sagas)'
+    );
+    return {
+        initialized: true,
+        storeResult: primaryStoreResult,
+    };
 }

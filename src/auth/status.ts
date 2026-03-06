@@ -47,15 +47,13 @@ export function printSummary(status: AuthProviderStatus, options: SummaryOptions
     if (status.valid) {
         print('\x1b[32mAuthentication is configured and valid.\x1b[0m');
 
-        // Primary store status (local encryption)
-        if (!conversationsConfig.useFallbackStore) {
-            if (!supportsPersistence) {
-                print('Primary store: \x1b[33mdisabled\x1b[0m (no cached encryption keys)');
-            } else if (!status.details.hasKeyPassword) {
-                print('Primary store: \x1b[33mdisabled\x1b[0m (no keyPassword)');
-            } else {
-                print('Primary store: \x1b[32menabled\x1b[0m');
-            }
+        // Conversation store status
+        if (!supportsPersistence) {
+            print('Conversation store: \x1b[33mminimal (in-memory)\x1b[0m - no encryption keys');
+        } else if (!status.details.hasKeyPassword) {
+            print('Conversation store: \x1b[33mminimal (in-memory)\x1b[0m - no keyPassword');
+        } else {
+            print('Conversation store: \x1b[32mpersistent\x1b[0m');
         }
 
         // Sync status (Proton server sync)

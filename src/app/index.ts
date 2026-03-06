@@ -10,7 +10,7 @@ import { logger } from './logger.js';
 import { resolveProjectPath } from './paths.js';
 import { LumoClient } from '../lumo-client/index.js';
 import { createAuthProvider, AuthManager, type AuthProvider, type ProtonApi } from '../auth/index.js';
-import { getConversationStore, getFallbackStore, setConversationStore, type ConversationStore, initializeSync, initializeConversationStore, FallbackStore } from '../conversations/index.js';
+import { getConversationStore, setConversationStore, initializeSync, initializeConversationStore, type IConversationStore } from '../conversations/index.js';
 import { createMockProtonApi } from '../mock/mock-api.js';
 import { installFetchAdapter } from '../shims/fetch-adapter.js';
 import { suppressFullApiErrors } from '../shims/console.js';
@@ -43,25 +43,15 @@ export class Application {
    * Initialize mock mode - bypass auth, use simulated API responses
    */
   private async initializeMock(): Promise<void> {
-    const conversationsConfig = getConversationsConfig();
-
-    if (!conversationsConfig.useFallbackStore) {
-      // Use primary store with fake-indexeddb
-      const { initializeMockStore } = await import('../mock/mock-store.js');
-      const result = await initializeMockStore();
-      setConversationStore(result.conversationStore);
-    } else {
-      // Use fallback in-memory store
-      getFallbackStore();
-    }
+    // Use primary store with fake-indexeddb for mock mode
+    const { initializeMockStore } = await import('../mock/mock-store.js');
+    const result = await initializeMockStore();
+    setConversationStore(result.conversationStore);
 
     this.protonApi = createMockProtonApi(mockConfig.scenario);
     this.lumoClient = new LumoClient(this.protonApi, { enableEncryption: false });
 
-    logger.info({
-      scenario: mockConfig.scenario,
-      useFallbackStore: conversationsConfig.useFallbackStore,
-    }, 'Mock mode active - auth and sync bypassed');
+    logger.info({ scenario: mockConfig.scenario }, 'Mock mode active - auth and sync bypassed');
   }
 
   /**
@@ -136,7 +126,7 @@ export class Application {
     return this.lumoClient;
   }
 
-  getConversationStore(): ConversationStore | FallbackStore {
+  getConversationStore(): IConversationStore | undefined {
     return getConversationStore();
   }
 

@@ -1,12 +1,12 @@
 import { RequestQueue } from './queue.js';
 import { LumoClient } from '../lumo-client/index.js';
-import type { ConversationStore, FallbackStore } from '../conversations/index.js';
+import type { IConversationStore } from '../conversations/index.js';
 import type { AuthManager } from '../auth/index.js';
 
 export interface EndpointDependencies {
   queue: RequestQueue;
   lumoClient: LumoClient;
-  conversationStore?: ConversationStore | FallbackStore;
+  conversationStore?: IConversationStore;
   syncInitialized?: boolean;
   authManager?: AuthManager;
   vaultPath?: string;

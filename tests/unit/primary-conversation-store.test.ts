@@ -237,14 +237,6 @@ describe('ConversationStore', () => {
         });
     });
 
-    describe('setGenerating', () => {
-        it('sets conversation status to generating', () => {
-            ctx.conversationStore.getOrCreate('conv-1');
-            ctx.conversationStore.setGenerating('conv-1');
-            expect(ctx.conversationStore.get('conv-1')!.status).toBe('generating');
-        });
-    });
-
     describe('delete', () => {
         it('removes conversation', () => {
             ctx.conversationStore.getOrCreate('conv-1');
@@ -268,18 +260,6 @@ describe('ConversationStore', () => {
             const ids = entries.map(([id]) => id);
             expect(ids).toContain('conv-1');
             expect(ids).toContain('conv-2');
-        });
-    });
-
-    describe('getStats', () => {
-        it('returns correct total count', () => {
-            ctx.conversationStore.getOrCreate('conv-1');
-            ctx.conversationStore.getOrCreate('conv-2');
-
-            const stats = ctx.conversationStore.getStats();
-            expect(stats.total).toBeGreaterThanOrEqual(2);
-            // dirty is always 0 for ConversationStore (upstream uses IDB flags)
-            expect(stats.dirty).toBe(0);
         });
     });
 
@@ -308,35 +288,6 @@ describe('ConversationStore', () => {
 
             const result = ctx.conversationStore.createFromTurns(turns);
             expect(result.title).toBe('What is the weather?');
-        });
-    });
-
-    describe('onDirtyCallback', () => {
-        it('calls callback when messages are appended', () => {
-            let callCount = 0;
-            ctx.conversationStore.setOnDirtyCallback(() => {
-                callCount++;
-            });
-
-            // getOrCreate doesn't call notifyDirty (upstream uses IDB dirty flags)
-            ctx.conversationStore.getOrCreate('conv-1');
-            expect(callCount).toBe(0);
-
-            // appendMessages does call notifyDirty
-            ctx.conversationStore.appendMessages('conv-1', [
-                { role: 'user', content: 'Hello' },
-            ]);
-            expect(callCount).toBe(1);
-
-            // appendAssistantResponse also calls notifyDirty
-            ctx.conversationStore.appendAssistantResponse('conv-1', {
-                content: 'Hi!',
-            });
-            expect(callCount).toBe(2);
-
-            // setTitle also calls notifyDirty
-            ctx.conversationStore.setTitle('conv-1', 'New Title');
-            expect(callCount).toBe(3);
         });
     });
 

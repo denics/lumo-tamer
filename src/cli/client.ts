@@ -19,6 +19,7 @@ import type { AssistantMessageData } from '../lumo-client/index.js';
 import { blockHandlers, executeBlocks, formatResultsMessage } from './local-actions/block-handlers.js';
 import { CodeBlockDetector, type CodeBlock } from './local-actions/code-block-detector.js';
 import { buildCliInstructions } from './message-converter.js';
+import { MinimalStore, type IConversationStore } from '../conversations/index.js';
 
 interface LumoResponse {
   /** Assistant message data ready for persistence */
@@ -29,11 +30,12 @@ interface LumoResponse {
 
 export class CLIClient {
   private conversationId: string;
-  private store;
+  private store: IConversationStore;
 
   constructor(private app: Application) {
     this.conversationId = randomUUID();
-    this.store = app.getConversationStore();
+    // Use app store if available, otherwise create minimal in-memory store
+    this.store = app.getConversationStore() ?? new MinimalStore();
   }
 
   async run(): Promise<void> {

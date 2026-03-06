@@ -5,7 +5,7 @@
 
 import { logger } from './logger.js';
 import { getCommandsConfig } from './config.js';
-import { getSyncService, getConversationStore, getAutoSyncService } from '../conversations/index.js';
+import { getConversationStore } from '../conversations/index.js';
 import type { AuthManager } from '../auth/index.js';
 import type { Turn } from '../lumo-client/index.js';
 
@@ -171,11 +171,12 @@ function handleTitleCommand(params: string, context?: CommandContext): string {
 }
 
 /**
- * Handle /save command - save current conversation only
+ * Handle /save command - save current conversation
  * Optionally set title first with /save <title>
  *
  * For stateless requests (no conversationId), creates a new conversation
- * from the provided messages and saves it.
+ * from the provided messages. Sync happens automatically via Redux sagas
+ * when using the primary store.
  */
 async function handleSaveCommand(params: string, context?: CommandContext): Promise<string> {
   try {
@@ -184,6 +185,10 @@ async function handleSaveCommand(params: string, context?: CommandContext): Prom
     }
 
     const store = getConversationStore();
+    if (!store) {
+      return 'Conversation store not available.';
+    }
+
     let conversationId = context?.conversationId;
     let wasCreated = false;
 
@@ -204,19 +209,15 @@ async function handleSaveCommand(params: string, context?: CommandContext): Prom
       }
     }
 
-    const syncService = getSyncService();
-    const synced = await syncService.syncById(conversationId);
-
-    if (!synced) {
-      return 'Conversation not found or could not be saved.';
+    const conversation = store.get(conversationId);
+    if (!conversation) {
+      return 'Conversation not found.';
     }
 
-    const conversation = store.get(conversationId);
-    const title = conversation?.title ?? 'Unknown';
+    const title = conversation.title ?? 'Unknown';
 
-    // Different message for newly created vs existing conversation
     if (wasCreated) {
-      return `Created and saved conversation: ${title}`;
+      return `Created conversation: ${title}`;
     }
     return `Saved conversation: ${title}`;
   } catch (error) {
@@ -226,32 +227,32 @@ async function handleSaveCommand(params: string, context?: CommandContext): Prom
 }
 
 /**
- * Handle /load command - load a conversation from server by local ID
+ * Handle /load command - load a conversation by ID
+ *
+ * With the primary store, conversations are loaded from IndexedDB automatically.
+ * This command provides info about an existing conversation.
  */
 async function handleLoadCommand(params: string, context?: CommandContext): Promise<string> {
   try {
-    if (!context?.syncInitialized) {
-      return 'Sync not initialized. Persistence may be disabled or KeyManager not ready.';
-    }
-
     const localId = params.trim();
     if (!localId) {
       return 'Usage: /load <id>\nExample: /load f0654976-d628-4516-8e80-a0599b6593ac';
     }
 
-    const syncService = getSyncService();
-    const conversationId = await syncService.loadExistingConversation(localId);
+    const store = getConversationStore();
+    if (!store) {
+      return 'Conversation store not available.';
+    }
 
-    if (!conversationId) {
+    const conversation = store.get(localId);
+    if (!conversation) {
       return `Conversation not found: ${localId}`;
     }
 
-    const store = getConversationStore();
-    const conversation = store.get(conversationId);
-    const messageCount = conversation?.messages.length ?? 0;
-    const title = conversation?.title ?? 'Untitled';
+    const messageCount = conversation.messages.length ?? 0;
+    const title = conversation.title ?? 'Untitled';
 
-    return `Loaded conversation: ${title}\nLocal ID: ${conversationId}\nMessages: ${messageCount}`;
+    return `Loaded conversation: ${title}\nLocal ID: ${localId}\nMessages: ${messageCount}`;
   } catch (error) {
     logger.error({ error }, 'Failed to execute /load command');
     return `Load failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
@@ -283,10 +284,6 @@ async function handleLogoutCommand(context?: CommandContext): Promise<string> {
     if (!context?.authManager) {
       return 'Logout not available - missing auth context.';
     }
-
-    // Stop auto-sync if running
-    const autoSync = getAutoSyncService();
-    autoSync?.stop();
 
     // Perform logout (stops refresh timer, revokes session, deletes tokens)
     await context.authManager.logout();
