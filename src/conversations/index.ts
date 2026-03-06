@@ -289,7 +289,7 @@ export async function initializeSync(
     }
 
     // Sync requires browser auth for lumo scope (spaces API access)
-    if (!authProvider.supportsSync()) {
+    if (!authProvider.supportsFullApi()) {
         logger.warn(
             { method: authProvider.method },
             'Conversation sync requires browser auth method'

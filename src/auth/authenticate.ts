@@ -138,7 +138,7 @@ export async function runAuthCommand(argv: string[]): Promise<void> {
     printStatus(status);
     printSummary(status, {
         supportsPersistence: provider.supportsPersistence(),
-        supportsSync: provider.supportsSync(),
+        supportsFullApi: provider.supportsFullApi(),
     });
 
     print('\nYou can now run: tamer or tamer server');

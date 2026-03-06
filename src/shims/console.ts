@@ -29,10 +29,11 @@ const suppressLogs = [
     '\\[STREAM\\] Parsed item:',
     'API:',
     'deserializeMessageSaga',
+    'Lumo API call ignored \\(local only mode\\)'
 ];
 const suppressLogRegex = new RegExp(`^(?:${suppressLogs.join('|')})`);
 
-const suppressErrors = [
+const suppressApiErrors = [
     // Sync-disabled errors (login/rclone auth without lumo scope)
     'list spaces failure',
     'push conversation failure',
@@ -44,7 +45,15 @@ const suppressErrors = [
     '.* 418',
     'Lumo API call ignored \\(local only mode\\)',
 ];
-const suppressErrorRegex = new RegExp(`^(?:${suppressErrors.join('|')})`);
+const suppressApiErrorRegex = new RegExp(`^(?:${suppressApiErrors.join('|')})`);
+
+// Module-level flag - when false, suppress API errors (that we triggered ourselves) to trace level
+// Default: true (show errors until app tells us about login/rclone auth which lack lumo scope)
+let fullApiErrorsSuppressed = false;
+
+export function suppressFullApiErrors(suppres = true): void {
+    fullApiErrorsSuppressed = suppres;
+}
 
 type EE = unknown[] & { error?: Error };
 
@@ -77,13 +86,13 @@ function log(levelOrLog: Level | 'log', args: unknown[]) {
     const first = ee[0];
     let level = (levelOrLog == 'log') ? 'debug' : levelOrLog;
 
-    if(ee?.error?.message && suppressErrorRegex.test(ee.error.message))
+    if(fullApiErrorsSuppressed && ee?.error?.message && suppressApiErrorRegex.test(ee.error.message))
         level = 'trace';
 
     if (typeof first == 'string') {
         ee.shift()
         if (    (levelOrLog == 'log' && suppressLogRegex.test(first))
-            ||  (levelOrLog == 'error' && suppressErrorRegex.test(first))
+            ||  (fullApiErrorsSuppressed && levelOrLog == 'error' && suppressApiErrorRegex.test(first))
         )
             level = 'trace';
         logger[level](minimal(ee), first);

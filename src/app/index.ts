@@ -13,6 +13,7 @@ import { createAuthProvider, AuthManager, type AuthProvider, type ProtonApi } fr
 import { getConversationStore, getFallbackStore, setConversationStore, type ConversationStore, initializeSync, initializeConversationStore, FallbackStore } from '../conversations/index.js';
 import { createMockProtonApi } from '../mock/mock-api.js';
 import { installFetchAdapter } from '../shims/fetch-adapter.js';
+import { suppressFullApiErrors } from '../shims/console.js';
 import type { AppContext } from './types.js';
 
 export class Application implements AppContext {
@@ -92,11 +93,12 @@ export class Application implements AppContext {
     this.lumoClient = new LumoClient(this.protonApi);
 
     // Install fetch adapter for upstream LumoApi
-    // canUseLumoApi is false for login/rclone auth (no lumo scope)
-    this.cleanupFetchAdapter = installFetchAdapter(
-      this.protonApi,
-      this.authProvider.supportsSync()
-    );
+    // fullApiSupported is false for login/rclone auth (no lumo scope)
+    const fullApiSupported = this.authProvider.supportsFullApi();
+    this.cleanupFetchAdapter = installFetchAdapter(this.protonApi, fullApiSupported);
+
+    // Configure console shim to suppress API errors when full api is not supported
+    suppressFullApiErrors(!fullApiSupported);
 
     // Start scheduled auto-refresh
     this.authManager.startAutoRefresh();
