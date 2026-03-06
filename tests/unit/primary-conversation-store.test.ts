@@ -17,7 +17,6 @@ beforeEach(async () => {
     // Use unique userId per test for IDB isolation
     const testUserId = 'test-user-' + Date.now() + '-' + Math.random().toString(36).slice(2);
     ctx = await initializeMockStore({
-        maxInMemory: 50,
         userId: testUserId,
         spaceId: 'test-space-id',
     });

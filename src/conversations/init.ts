@@ -15,7 +15,7 @@
 import createSagaMiddleware from 'redux-saga';
 
 import { logger } from '../app/logger.js';
-import type { ConversationStoreConfig, SpaceId } from './types.js';
+import type { SpaceId } from './types.js';
 
 import { DbApi } from '@lumo/indexedDb/db.js';
 import { generateSpaceKeyBase64 } from '@lumo/crypto/index.js';
@@ -40,7 +40,6 @@ export interface StoreConfig {
     masterKey: string; // Base64-encoded master key
     /** Project name for finding/creating the space */
     projectName: string;
-    storeConfig: ConversationStoreConfig;
 }
 
 export interface StoreResult {
@@ -66,7 +65,7 @@ export interface StoreResult {
 export async function initializeStore(
     config: StoreConfig
 ): Promise<StoreResult> {
-    const { sessionUid, userId, masterKey, projectName, storeConfig } = config;
+    const { sessionUid, userId, masterKey, projectName } = config;
 
     logger.info({ userId: userId.slice(0, 8) + '...' }, 'Initializing upstream storage');
 
@@ -121,11 +120,7 @@ export async function initializeStore(
     const spaceId = findOrCreateSpace(store, projectName);
 
     // 11. Create adapter
-    const conversationStore = new ConversationStore(
-        store,
-        spaceId,
-        storeConfig
-    );
+    const conversationStore = new ConversationStore(store, spaceId);
 
     logger.info({ spaceId }, 'Upstream storage initialized successfully');
 

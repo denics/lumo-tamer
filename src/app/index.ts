@@ -49,13 +49,11 @@ export class Application implements AppContext {
     if (!conversationsConfig.useFallbackStore) {
       // Use primary store with fake-indexeddb
       const { initializeMockStore } = await import('../mock/mock-store.js');
-      const result = await initializeMockStore({
-        maxInMemory: conversationsConfig.maxInMemory,
-      });
+      const result = await initializeMockStore();
       setConversationStore(result.conversationStore);
     } else {
       // Use fallback in-memory store
-      getFallbackStore({ maxConversationsInMemory: conversationsConfig.maxInMemory });
+      getFallbackStore();
     }
 
     this.protonApi = createMockProtonApi(mockConfig.scenario);

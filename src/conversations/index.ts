@@ -17,7 +17,6 @@ export type {
     Message,
     MessageId,
     MessagePrivate,
-    ConversationStoreConfig,
     SpaceId,
     RemoteId,
     IdMapEntry,
@@ -84,7 +83,6 @@ import { getKeyManager } from './key-manager.js';
 import { getSyncService, getAutoSyncService, getFallbackStore } from './fallback/index.js';
 import { ConversationStore } from './store.js';
 import { initializeStore, type StoreResult } from './init.js';
-import type { ConversationStoreConfig } from './types.js';
 
 // ============================================================================
 // Conversation Store Initialization
@@ -125,14 +123,11 @@ export async function initializeConversationStore(
     options: InitializeStoreOptions
 ): Promise<InitializeStoreResult> {
     const { protonApi, uid, authProvider, conversationsConfig } = options;
-    const storeConfig: ConversationStoreConfig = {
-        maxConversationsInMemory: conversationsConfig.maxInMemory,
-    };
 
     // Check if fallback is explicitly requested
     if (conversationsConfig.useFallbackStore) {
         logger.info('Using fallback store (explicitly configured)');
-        activeStore = getFallbackStore(storeConfig);
+        activeStore = getFallbackStore();
         return { isPrimary: false };
     }
 
@@ -142,7 +137,7 @@ export async function initializeConversationStore(
             { method: authProvider.method },
             'Primary store requires cached encryption keys. Falling back to in-memory store.'
         );
-        activeStore = getFallbackStore(storeConfig);
+        activeStore = getFallbackStore();
         return { isPrimary: false };
     }
 
@@ -152,7 +147,7 @@ export async function initializeConversationStore(
             { method: authProvider.method },
             'Primary store requires keyPassword. Falling back to in-memory store.'
         );
-        activeStore = getFallbackStore(storeConfig);
+        activeStore = getFallbackStore();
         return { isPrimary: false };
     }
 
@@ -171,7 +166,7 @@ export async function initializeConversationStore(
     }
 
     // Fallback
-    activeStore = getFallbackStore(storeConfig);
+    activeStore = getFallbackStore();
     return { isPrimary: false };
 }
 
@@ -213,9 +208,6 @@ async function initializePrimaryStore(
         userId: authProvider.getUserId() ?? uid,
         masterKey: masterKeyBase64,
         projectName: conversationsConfig.projectName,
-        storeConfig: {
-            maxConversationsInMemory: conversationsConfig.maxInMemory,
-        },
     });
 
     return result;

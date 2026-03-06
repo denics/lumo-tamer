@@ -27,7 +27,7 @@ interface TestServer {
 async function createTestServerWithMetrics(): Promise<TestServer> {
   const mockApi = createMockProtonApi('success');
   const lumoClient = new LumoClient(mockApi, { enableEncryption: false });
-  const store = new FallbackStore({ maxConversationsInMemory: 50 });
+  const store = new FallbackStore();
   const queue = new RequestQueue(1);
 
   const deps: EndpointDependencies = {

@@ -63,13 +63,9 @@ log:
 
 # Shared Conversations Configuration (can be overridden in server/cli sections)
 # Note: In-memory conversation storage is always active regardless of sync settings
-# TODO: check for all conversation options:
 # - do they still work/make sense with upstream store?
 # - can they still be overwritten for cli/server? (ie. overwriting dbpath doesn't make sense if sync enabled, does it otherwise?)
 conversations:
-  # Max conversations to keep in memory (LRU eviction)
-  maxInMemory: 100
-
   # Path for IndexedDB SQLite files (used when useUpstreamStorage is true)
   databasePath: "sessions/"
 
