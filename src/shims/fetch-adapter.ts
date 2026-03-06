@@ -30,12 +30,12 @@ const originalFetch = globalThis.fetch;
  * All other requests (including absolute URLs) pass through to original fetch.
  *
  * @param protonApi - The authenticated Api function from lumo-tamer
- * @param canUseLumoApi - Whether lumo API calls are allowed (requires lumo scope from browser auth)
+ * @param canUseFullApi - Whether lumo API calls are allowed (requires lumo scope from browser auth)
  * @returns A fetch-compatible function
  */
 export function createFetchAdapter(
     protonApi: ProtonApi,
-    canUseLumoApi: boolean = true
+    canUseFullApi: boolean = true
 ): typeof globalThis.fetch {
     return async function adaptedFetch(
         input: RequestInfo | URL,
@@ -57,7 +57,7 @@ export function createFetchAdapter(
         // Block lumo API calls when not available (login/rclone auth lacks lumo scope)
         // Return 418 to trigger ClientError (no retry) while preserving dirty flags in IDB
         // Using 418 "I'm a teapot" so it's easily distinguishable from real server errors
-        if (!canUseLumoApi && apiUrl.startsWith('lumo/v1/')) {
+        if (!canUseFullApi && apiUrl.startsWith('lumo/v1/')) {
             const msg = 'Lumo API call ignored (local only mode)';
             logger.debug({ url: apiUrl }, msg);
             return new Response(JSON.stringify({
@@ -126,14 +126,14 @@ export function createFetchAdapter(
  * Call this before creating LumoApi instances.
  *
  * @param protonApi - The authenticated Api function from lumo-tamer
- * @param canUseLumoApi - Whether lumo API calls are allowed (requires lumo scope from browser auth)
+ * @param canUseFullApi - Whether lumo API calls are allowed (requires lumo scope from browser auth)
  * @returns A cleanup function to restore the original fetch
  */
 export function installFetchAdapter(
     protonApi: ProtonApi,
-    canUseLumoApi: boolean = true
+    canUseFullApi: boolean = true
 ): () => void {
-    globalThis.fetch = createFetchAdapter(protonApi, canUseLumoApi);
+    globalThis.fetch = createFetchAdapter(protonApi, canUseFullApi);
 
     return () => {
         globalThis.fetch = originalFetch;
