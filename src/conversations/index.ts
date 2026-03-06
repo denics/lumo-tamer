@@ -342,7 +342,6 @@ export async function initializeSync(
             uid,
             keyManager,
             spaceName: syncConfig.projectName,
-            includeSystemMessages: syncConfig.includeSystemMessages,
         });
 
         // Eagerly fetch/create space

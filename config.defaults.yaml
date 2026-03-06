@@ -90,11 +90,6 @@ conversations:
     enabled: false
     # Project name for conversations (created if doesn't exist)
     projectName: lumo-tamer
-    # Include system/tool messages in sync
-    # WARNING: Setting this to false is experimental:
-    # - this may break saved conversation flow (conversations get split or become trees)
-    # - not all system messages or commands will be filtered out
-    includeSystemMessages: true
     # Auto-sync vs manual /save command
     # DEPRECATED
     autoSync: true

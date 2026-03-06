@@ -33,7 +33,6 @@ export interface SyncServiceConfig {
     keyManager: KeyManager;
     uid: string;
     spaceName: string;
-    includeSystemMessages?: boolean;
 }
 
 /**
@@ -67,7 +66,6 @@ export class SyncService {
     private lumoApi: LumoApi;
     private keyManager: KeyManager;
     private spaceManager: SpaceManager;
-    private includeSystemMessages: boolean;
 
     // Message ID mapping (local -> remote)
     private messageIdMap = new Map<string, RemoteId>();
@@ -75,7 +73,6 @@ export class SyncService {
     constructor(config: SyncServiceConfig) {
         this.lumoApi = new LumoApi(config.uid);
         this.keyManager = config.keyManager;
-        this.includeSystemMessages = config.includeSystemMessages ?? false;
 
         this.spaceManager = new SpaceManager({
             lumoApi: this.lumoApi,
@@ -227,14 +224,10 @@ export class SyncService {
             logger.debug({ conversationId, remoteId: conversationRemoteId }, 'Updated conversation on server');
         }
 
-        // Sync messages
-        const messagesToSync = this.includeSystemMessages
-            ? conversation.messages
-            : conversation.messages.filter(m => m.role === Role.User || m.role === Role.Assistant);
-
+        // Sync all messages
         const messageMap = new Map(conversation.messages.map(m => [m.id, m]));
 
-        for (const message of messagesToSync) {
+        for (const message of conversation.messages) {
             await this.syncMessage(message, conversationRemoteId, messageMap);
         }
     }
