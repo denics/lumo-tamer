@@ -62,7 +62,7 @@ let _logger: pino.Logger;
 // Must be called early in entry point, before other modules use logger
 export function initLogger(config: LogConfig): void {
   _logger = createLogger(config);
-  installConsoleShim();
+  installConsoleShim(_logger);
 }
 
 // Get the global logger instance

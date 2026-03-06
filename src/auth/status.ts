@@ -36,11 +36,11 @@ export function printStatus(status: AuthProviderStatus): void {
 
 export interface SummaryOptions {
     supportsPersistence: boolean;
-    supportsSync: boolean;
+    supportsFullApi: boolean;
 }
 
 export function printSummary(status: AuthProviderStatus, options: SummaryOptions): void {
-    const { supportsPersistence, supportsSync } = options;
+    const { supportsPersistence, supportsFullApi } = options;
     const conversationsConfig = getConversationsConfig();
 
     print('\n--- Summary ---');
@@ -59,8 +59,8 @@ export function printSummary(status: AuthProviderStatus, options: SummaryOptions
         }
 
         // Sync status (Proton server sync)
-        if (conversationsConfig.sync.enabled) {
-            if (!supportsSync) {
+        if (conversationsConfig.enableSync) {
+            if (!supportsFullApi) {
                 print('Conversation sync: \x1b[33mdisabled\x1b[0m (requires browser auth for lumo scope)');
             } else if (!status.details.hasKeyPassword) {
                 print('Conversation sync: \x1b[33mdisabled\x1b[0m (no keyPassword)');
@@ -88,7 +88,7 @@ export async function runStatus(): Promise<void> {
         printStatus(status);
         printSummary(status, {
             supportsPersistence: provider.supportsPersistence(),
-            supportsSync: provider.supportsSync(),
+            supportsFullApi: provider.supportsFullApi(),
         });
 
         print('');

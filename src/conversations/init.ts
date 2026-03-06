@@ -15,7 +15,7 @@
 import createSagaMiddleware from 'redux-saga';
 
 import { logger } from '../app/logger.js';
-import type { ConversationStoreConfig, SpaceId } from './types.js';
+import type { SpaceId } from './types.js';
 
 import { DbApi } from '@lumo/indexedDb/db.js';
 import { generateSpaceKeyBase64 } from '@lumo/crypto/index.js';
@@ -38,8 +38,8 @@ export interface StoreConfig {
     /** Stable user ID for database naming (userKeys[0].ID) */
     userId: string;
     masterKey: string; // Base64-encoded master key
-    spaceId: SpaceId;
-    storeConfig: ConversationStoreConfig;
+    /** Project name for finding/creating the space */
+    projectName: string;
 }
 
 export interface StoreResult {
@@ -57,11 +57,15 @@ export interface StoreResult {
  * - Redux store for in-memory state
  * - Saga middleware for async operations
  * - ConversationStore adapter for compatibility
+ *
+ * Space resolution (after remote spaces are fetched):
+ * 1. Find existing space by projectName in Redux state
+ * 2. Create new space with projectName if no match
  */
 export async function initializeStore(
     config: StoreConfig
 ): Promise<StoreResult> {
-    const { sessionUid, userId, masterKey, spaceId, storeConfig } = config;
+    const { sessionUid, userId, masterKey, projectName } = config;
 
     logger.info({ userId: userId.slice(0, 8) + '...' }, 'Initializing upstream storage');
 
@@ -111,18 +115,14 @@ export async function initializeStore(
     // This ensures we don't create a space locally if it already exists remotely
     await waitForRemoteSpaces(store);
 
-    // 10. Ensure the space exists in Redux
-    // If the space wasn't loaded from IDB or server, create it
-    await ensureSpaceExists(store, spaceId);
+    // 10. Find or create space by projectName
+    // Spaces are now decrypted in Redux state, so we can search directly
+    const spaceId = findOrCreateSpace(store, projectName);
 
-    // 10. Create adapter
-    const conversationStore = new ConversationStore(
-        store,
-        spaceId,
-        storeConfig
-    );
+    // 11. Create adapter
+    const conversationStore = new ConversationStore(store, spaceId);
 
-    logger.info('Upstream storage initialized successfully');
+    logger.info({ spaceId }, 'Upstream storage initialized successfully');
 
     return {
         store,
@@ -213,17 +213,37 @@ async function waitForRemoteSpaces(
 }
 
 /**
- * Ensure the space exists in Redux, creating if necessary
+ * Find existing space by projectName or create a new one
+ *
+ * After waitForRemoteSpaces(), all spaces are decrypted in Redux state,
+ * so we can search directly without manual decryption.
  */
-async function ensureSpaceExists(store: LumoStore, spaceId: SpaceId): Promise<void> {
+function findOrCreateSpace(
+    store: LumoStore,
+    projectName: string
+): SpaceId {
     const state = store.getState();
+    const spaces = Object.values(state.spaces);
 
-    if (state.spaces[spaceId]) {
-        logger.debug({ spaceId }, 'Space already exists in Redux');
-        return;
+    logger.info({
+        projectName,
+        totalSpaces: spaces.length,
+    }, 'Finding space by name...');
+
+    // Search for existing space by projectName
+    for (const space of spaces) {
+        if (space.isProject && space.projectName === projectName) {
+            logger.info({
+                spaceId: space.id,
+                projectName: space.projectName,
+            }, 'Found existing project by name');
+            return space.id;
+        }
     }
 
-    logger.info({ spaceId }, 'Creating new space for upstream storage');
+    // Create new space with projectName
+    const spaceId = crypto.randomUUID();
+    logger.info({ spaceId, projectName }, 'Creating new project space');
 
     const now = new Date().toISOString();
     const spaceKey = generateSpaceKeyBase64();
@@ -233,9 +253,12 @@ async function ensureSpaceExists(store: LumoStore, spaceId: SpaceId): Promise<vo
         createdAt: now,
         updatedAt: now,
         spaceKey,
-        isProject: false,
+        isProject: true,
+        projectName,
     };
 
     store.dispatch(addSpace(newSpace));
     store.dispatch(pushSpaceRequest({ id: spaceId, priority: 'urgent' }));
+
+    return spaceId;
 }

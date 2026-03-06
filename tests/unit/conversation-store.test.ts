@@ -11,7 +11,7 @@ import { FallbackStore } from '../../src/conversations/fallback/store.js';
 let store: FallbackStore;
 
 beforeEach(() => {
-  store = new FallbackStore({ maxConversationsInMemory: 5 });
+  store = new FallbackStore();
 });
 
 describe('FallbackStore', () => {
@@ -163,9 +163,12 @@ describe('FallbackStore', () => {
   });
 
   describe('LRU eviction', () => {
+    // Note: MAX_CONVERSATIONS is hardcoded to 100, so eviction tests would need 101+ conversations
+    // These tests verify the LRU tracking mechanism works, not the actual eviction threshold
+
     it('evicts least recently used when max exceeded', () => {
-      // Create 5 conversations (at max)
-      for (let i = 0; i < 5; i++) {
+      // Create 100 conversations (at max)
+      for (let i = 0; i < 100; i++) {
         const state = store.getOrCreate(`conv-${i}`);
         store.markSynced(`conv-${i}`);  // Mark clean so they can be evicted
         state.dirty = false;
@@ -174,18 +177,18 @@ describe('FallbackStore', () => {
       // Access conv-0 to make it most recent
       store.get('conv-0');
 
-      // Add 6th conversation, should evict conv-1 (oldest non-recently-used)
-      store.getOrCreate('conv-5');
-      store.markSynced('conv-5');
+      // Add 101st conversation, should evict conv-1 (oldest non-recently-used)
+      store.getOrCreate('conv-100');
+      store.markSynced('conv-100');
 
       expect(store.has('conv-0')).toBe(true);   // accessed recently
       expect(store.has('conv-1')).toBe(false);   // evicted (LRU)
-      expect(store.has('conv-5')).toBe(true);    // just created
+      expect(store.has('conv-100')).toBe(true);  // just created
     });
 
     it('skips dirty conversations during eviction', () => {
-      // Create 5 conversations, all clean except conv-1
-      for (let i = 0; i < 5; i++) {
+      // Create 100 conversations, all clean except conv-1
+      for (let i = 0; i < 100; i++) {
         store.getOrCreate(`conv-${i}`);
         if (i !== 1) {
           store.markSynced(`conv-${i}`);
@@ -193,9 +196,9 @@ describe('FallbackStore', () => {
         }
       }
 
-      // Add 6th: conv-0 is LRU but let's check dirty skipping
+      // Add 101st: conv-0 is LRU but let's check dirty skipping
       // conv-0 should be evicted since it's clean
-      store.getOrCreate('conv-5');
+      store.getOrCreate('conv-100');
 
       expect(store.has('conv-1')).toBe(true);  // dirty, not evicted
     });
@@ -236,7 +239,7 @@ describe('FallbackStore', () => {
       const stats = store.getStats();
       expect(stats.total).toBe(2);
       expect(stats.dirty).toBe(1);  // conv-2 is dirty
-      expect(stats.maxSize).toBe(5);
+      expect(stats.maxSize).toBe(100);  // hardcoded MAX_CONVERSATIONS
     });
   });
 });

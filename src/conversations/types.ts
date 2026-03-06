@@ -66,13 +66,6 @@ export interface ConversationState {
 }
 
 /**
- * Conversation store configuration (internal)
- */
-export interface ConversationStoreConfig {
-    maxConversationsInMemory: number;
-}
-
-/**
  * ID mapping between local and remote
  */
 export interface IdMapEntry {

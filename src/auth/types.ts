@@ -96,7 +96,7 @@ export interface IAuthProvider {
      * Whether sync to Proton servers is supported.
      * Only browser auth has the lumo scope needed for spaces API.
      */
-    supportsSync(): boolean;
+    supportsFullApi(): boolean;
 
     /**
      * Get stable user ID for database naming.

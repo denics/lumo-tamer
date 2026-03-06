@@ -27,7 +27,6 @@ import {
 import type {
     ConversationId,
     ConversationState,
-    ConversationStoreConfig,
     Message,
     MessageId,
     MessageForStore,
@@ -133,11 +132,7 @@ export class ConversationStore {
      */
     private semanticIdMap: Map<string, string> = new Map();
 
-    constructor(
-        store: LumoStore,
-        spaceId: SpaceId,
-        _config: ConversationStoreConfig
-    ) {
+    constructor(store: LumoStore, spaceId: SpaceId) {
         this.store = store;
         this.spaceId = spaceId;
         logger.info({ spaceId }, 'ConversationStore initialized');

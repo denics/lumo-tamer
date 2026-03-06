@@ -26,16 +26,10 @@ const logConfigSchema = z.object({
 
 
 const conversationsConfigSchema = z.object({
-  maxInMemory: z.number(),
   deriveIdFromUser: z.boolean(),
   useFallbackStore: z.boolean(),
-  sync: z.object({
-    enabled: z.boolean(),
-    projectId: z.string().uuid().optional(),
-    projectName: z.string().min(1),
-    includeSystemMessages: z.boolean(),
-    autoSync: z.boolean(),
-  }),
+  enableSync: z.boolean(),
+  projectName: z.string().min(1),
 });
 
 // Replace pattern entry schema

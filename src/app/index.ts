@@ -13,9 +13,9 @@ import { createAuthProvider, AuthManager, type AuthProvider, type ProtonApi } fr
 import { getConversationStore, getFallbackStore, setConversationStore, type ConversationStore, initializeSync, initializeConversationStore, FallbackStore } from '../conversations/index.js';
 import { createMockProtonApi } from '../mock/mock-api.js';
 import { installFetchAdapter } from '../shims/fetch-adapter.js';
-import type { AppContext } from './types.js';
+import { suppressFullApiErrors } from '../shims/console.js';
 
-export class Application implements AppContext {
+export class Application {
   private lumoClient!: LumoClient;
   private authProvider!: AuthProvider;
   private authManager!: AuthManager;
@@ -48,13 +48,11 @@ export class Application implements AppContext {
     if (!conversationsConfig.useFallbackStore) {
       // Use primary store with fake-indexeddb
       const { initializeMockStore } = await import('../mock/mock-store.js');
-      const result = await initializeMockStore({
-        maxInMemory: conversationsConfig.maxInMemory,
-      });
+      const result = await initializeMockStore();
       setConversationStore(result.conversationStore);
     } else {
       // Use fallback in-memory store
-      getFallbackStore({ maxConversationsInMemory: conversationsConfig.maxInMemory });
+      getFallbackStore();
     }
 
     this.protonApi = createMockProtonApi(mockConfig.scenario);
@@ -92,11 +90,12 @@ export class Application implements AppContext {
     this.lumoClient = new LumoClient(this.protonApi);
 
     // Install fetch adapter for upstream LumoApi
-    // canUseLumoApi is false for login/rclone auth (no lumo scope)
-    this.cleanupFetchAdapter = installFetchAdapter(
-      this.protonApi,
-      this.authProvider.supportsSync()
-    );
+    // fullApiSupported is false for login/rclone auth (no lumo scope)
+    const fullApiSupported = this.authProvider.supportsFullApi();
+    this.cleanupFetchAdapter = installFetchAdapter(this.protonApi, fullApiSupported);
+
+    // Configure console shim to suppress API errors when full api is not supported
+    suppressFullApiErrors(!fullApiSupported);
 
     // Start scheduled auto-refresh
     this.authManager.startAutoRefresh();
@@ -162,4 +161,3 @@ export class Application implements AppContext {
   }
 }
 
-export type { AppContext } from './types.js';

@@ -27,11 +27,13 @@ import type {
     ConversationState,
     Message,
     MessageId,
-    ConversationStoreConfig,
     SpaceId,
 } from '../types.js';
 import { getLogConfig } from '../../app/config.js';
 import { getMetrics } from '../../app/metrics.js';
+
+/** Max conversations to keep in memory (LRU eviction) */
+const MAX_CONVERSATIONS = 100;
 
 /**
  * Fallback in-memory conversation store
@@ -42,12 +44,11 @@ import { getMetrics } from '../../app/metrics.js';
 export class FallbackStore {
     private conversations = new Map<ConversationId, ConversationState>();
     private accessOrder: ConversationId[] = [];  // LRU tracking
-    private maxConversations: number;
+    private maxConversations = MAX_CONVERSATIONS;
     private defaultSpaceId: SpaceId;
     private onDirtyCallback?: () => void;
 
-    constructor(config: ConversationStoreConfig) {
-        this.maxConversations = config.maxConversationsInMemory;
+    constructor() {
         this.defaultSpaceId = randomUUID();
         logger.info({ spaceId: this.defaultSpaceId }, 'FallbackStore initialized');
     }
@@ -103,7 +104,6 @@ export class FallbackStore {
      * @param id - Conversation ID
      * @param incoming - Messages from API request
      * @returns Array of newly added messages
-     * @todo Refactor to share code with appendAssistantResponse()
      */
     appendMessages(
         id: ConversationId,
@@ -526,14 +526,10 @@ let fallbackStoreInstance: FallbackStore | null = null;
 
 /**
  * Get the global FallbackStore instance
- * Config is required on first call to initialize the store
  */
-export function getFallbackStore(config?: ConversationStoreConfig): FallbackStore {
+export function getFallbackStore(): FallbackStore {
     if (!fallbackStoreInstance) {
-        if (!config) {
-            throw new Error('FallbackStore not initialized - config required on first call');
-        }
-        fallbackStoreInstance = new FallbackStore(config);
+        fallbackStoreInstance = new FallbackStore();
     }
     return fallbackStoreInstance;
 }

@@ -23,8 +23,7 @@ const SPACE_DEK_CONTEXT = new TextEncoder().encode('dek.space.lumo');
 export interface SpaceManagerConfig {
     lumoApi: LumoApi;
     keyManager: KeyManager;
-    spaceName?: string;
-    configuredSpaceId?: string;
+    spaceName: string;
 }
 
 export interface SpaceContext {
@@ -40,8 +39,7 @@ export interface SpaceContext {
 export class SpaceManager {
     private lumoApi: LumoApi;
     private keyManager: KeyManager;
-    private spaceName?: string;
-    private configuredSpaceId?: string;
+    private spaceName: string;
 
     // Current space state
     private _spaceId?: SpaceId;
@@ -55,13 +53,9 @@ export class SpaceManager {
     private existingConversationsLoaded = false;
 
     constructor(config: SpaceManagerConfig) {
-        if (!config.configuredSpaceId && !config.spaceName) {
-            throw new Error('Either spaceId or spaceName must be provided');
-        }
         this.lumoApi = config.lumoApi;
         this.keyManager = config.keyManager;
         this.spaceName = config.spaceName;
-        this.configuredSpaceId = config.configuredSpaceId;
     }
 
     // --- Accessors ---
@@ -92,10 +86,7 @@ export class SpaceManager {
      * Ensure a space exists, creating one if needed
      * Called lazily on first sync
      *
-     * Matching logic:
-     * 1. If spaceId is configured, use that space directly (by UUID)
-     * 2. Otherwise, find a space with matching spaceName (projectName)
-     * 3. If no match found, create a new space
+     * Finds space by projectName, creates if not found.
      */
     async getOrCreateSpace(): Promise<SpaceContext> {
         // Already have a space
@@ -103,10 +94,7 @@ export class SpaceManager {
             return { spaceId: this._spaceId, remoteId: this._spaceRemoteId };
         }
 
-        const searchCriteria = this.configuredSpaceId
-            ? { spaceId: this.configuredSpaceId }
-            : { spaceName: this.spaceName };
-        logger.info(searchCriteria, 'Checking for existing project...');
+        logger.info({ spaceName: this.spaceName }, 'Checking for existing project...');
 
         const listResult = await this.lumoApi.listSpaces();
         const existingSpaces = Object.values(listResult.spaces);
@@ -118,39 +106,7 @@ export class SpaceManager {
             spaceTags: existingSpaces.map(s => s.id),
         }, 'Available projects');
 
-        // If spaceId is configured, find that specific space by UUID
-        if (this.configuredSpaceId) {
-            return this.findSpaceById(existingSpaces);
-        }
-
-        // Otherwise, find by name
         return this.findSpaceByName(existingSpaces);
-    }
-
-    private async findSpaceById(existingSpaces: RemoteSpace[]): Promise<SpaceContext> {
-        const space = existingSpaces.find(s => s.id === this.configuredSpaceId);
-        if (!space) {
-            logger.error({ spaceId: this.configuredSpaceId }, 'Configured project not found');
-            throw new Error(`Configured project ${this.configuredSpaceId} not found on server`);
-        }
-
-        if (!space.wrappedSpaceKey) {
-            logger.error({ spaceId: this.configuredSpaceId }, 'Configured project has no space key (deleted?)');
-            throw new Error(`Configured project ${this.configuredSpaceId} has no space key`);
-        }
-
-        try {
-            await this.initializeSpaceKeys({
-                id: space.id,
-                remoteId: space.remoteId,
-                wrappedSpaceKey: space.wrappedSpaceKey,
-            });
-            logger.info(`Using project by id ${space.id}: ${space.remoteId}`);
-            return { spaceId: this._spaceId!, remoteId: this._spaceRemoteId! };
-        } catch (error) {
-            logger.error({ spaceId: this.configuredSpaceId, error }, 'Failed to decrypt configured project');
-            throw new Error(`Cannot decrypt configured project ${this.configuredSpaceId}`);
-        }
     }
 
     private async findSpaceByName(existingSpaces: RemoteSpace[]): Promise<SpaceContext> {

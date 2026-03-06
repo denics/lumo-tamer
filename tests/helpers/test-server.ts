@@ -53,7 +53,7 @@ export async function createTestServer(
 ): Promise<TestServer> {
   const mockApi = createMockProtonApi(scenario);
   const lumoClient = new LumoClient(mockApi, { enableEncryption: false });
-  const store = new FallbackStore({ maxConversationsInMemory: 50 });
+  const store = new FallbackStore();
   const queue = new RequestQueue(1);
 
   const deps: EndpointDependencies = {

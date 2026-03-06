@@ -17,7 +17,6 @@ export type {
     Message,
     MessageId,
     MessagePrivate,
-    ConversationStoreConfig,
     SpaceId,
     RemoteId,
     IdMapEntry,
@@ -84,7 +83,6 @@ import { getKeyManager } from './key-manager.js';
 import { getSyncService, getAutoSyncService, getFallbackStore } from './fallback/index.js';
 import { ConversationStore } from './store.js';
 import { initializeStore, type StoreResult } from './init.js';
-import type { ConversationStoreConfig } from './types.js';
 
 // ============================================================================
 // Conversation Store Initialization
@@ -125,14 +123,11 @@ export async function initializeConversationStore(
     options: InitializeStoreOptions
 ): Promise<InitializeStoreResult> {
     const { protonApi, uid, authProvider, conversationsConfig } = options;
-    const storeConfig: ConversationStoreConfig = {
-        maxConversationsInMemory: conversationsConfig.maxInMemory,
-    };
 
     // Check if fallback is explicitly requested
     if (conversationsConfig.useFallbackStore) {
         logger.info('Using fallback store (explicitly configured)');
-        activeStore = getFallbackStore(storeConfig);
+        activeStore = getFallbackStore();
         return { isPrimary: false };
     }
 
@@ -142,7 +137,7 @@ export async function initializeConversationStore(
             { method: authProvider.method },
             'Primary store requires cached encryption keys. Falling back to in-memory store.'
         );
-        activeStore = getFallbackStore(storeConfig);
+        activeStore = getFallbackStore();
         return { isPrimary: false };
     }
 
@@ -152,7 +147,7 @@ export async function initializeConversationStore(
             { method: authProvider.method },
             'Primary store requires keyPassword. Falling back to in-memory store.'
         );
-        activeStore = getFallbackStore(storeConfig);
+        activeStore = getFallbackStore();
         return { isPrimary: false };
     }
 
@@ -171,7 +166,7 @@ export async function initializeConversationStore(
     }
 
     // Fallback
-    activeStore = getFallbackStore(storeConfig);
+    activeStore = getFallbackStore();
     return { isPrimary: false };
 }
 
@@ -183,7 +178,6 @@ async function initializePrimaryStore(
     keyPassword: string
 ): Promise<StoreResult | null> {
     const { protonApi, uid, authProvider, conversationsConfig } = options;
-    const syncConfig = conversationsConfig.sync;
 
     // Get cached keys from browser provider if available
     const cachedUserKeys = authProvider.getCachedUserKeys?.();
@@ -209,18 +203,11 @@ async function initializePrimaryStore(
     // Get master key as base64 for crypto layer
     const masterKeyBase64 = keyManager.getMasterKeyBase64();
 
-    // Generate or use configured space ID
-    const spaceId = syncConfig.projectId ?? crypto.randomUUID();
-
-    // Initialize store
     const result = await initializeStore({
         sessionUid: uid,
         userId: authProvider.getUserId() ?? uid,
         masterKey: masterKeyBase64,
-        spaceId,
-        storeConfig: {
-            maxConversationsInMemory: conversationsConfig.maxInMemory,
-        },
+        projectName: conversationsConfig.projectName,
     });
 
     return result;
@@ -281,15 +268,14 @@ export async function initializeSync(
     options: InitializeSyncOptions
 ): Promise<InitializeSyncResult> {
     const { protonApi, uid, authProvider, conversationsConfig } = options;
-    const syncConfig = conversationsConfig?.sync;
 
-    if (!syncConfig?.enabled) {
+    if (!conversationsConfig?.enableSync) {
         logger.info('Sync is disabled, skipping sync initialization');
         return { initialized: false };
     }
 
     // Sync requires browser auth for lumo scope (spaces API access)
-    if (!authProvider.supportsSync()) {
+    if (!authProvider.supportsFullApi()) {
         logger.warn(
             { method: authProvider.method },
             'Conversation sync requires browser auth method'
@@ -310,7 +296,7 @@ export async function initializeSync(
         // Primary store: sync is handled by sagas
         if (primaryStoreResult) {
             logger.info(
-                { method: authProvider.method, autoSync: syncConfig.autoSync },
+                { method: authProvider.method },
                 'Sync initialized (handled by sagas)'
             );
             return {
@@ -345,9 +331,7 @@ export async function initializeSync(
         const syncService = getSyncService({
             uid,
             keyManager,
-            spaceName: syncConfig.projectName,
-            spaceId: syncConfig.projectId,
-            includeSystemMessages: syncConfig.includeSystemMessages,
+            spaceName: conversationsConfig.projectName,
         });
 
         // Eagerly fetch/create space
@@ -359,16 +343,14 @@ export async function initializeSync(
             logger.warn({ error: msg }, 'getOrCreateSpace failed');
         }
 
-        // Initialize auto-sync if enabled
-        if (syncConfig.autoSync) {
-            const autoSync = getAutoSyncService(syncService, true);
+        // Initialize auto-sync
+        const autoSync = getAutoSyncService(syncService, true);
 
-            // Connect to fallback store
-            const store = getFallbackStore();
-            store.setOnDirtyCallback(() => autoSync.notifyDirty());
+        // Connect to fallback store
+        const store = getFallbackStore();
+        store.setOnDirtyCallback(() => autoSync.notifyDirty());
 
-            logger.info('Auto-sync enabled for fallback store');
-        }
+        logger.info('Auto-sync enabled for fallback store');
 
         return { initialized: true };
     } catch (error) {

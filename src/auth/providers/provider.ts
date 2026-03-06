@@ -159,7 +159,7 @@ export class AuthProvider implements IAuthProvider {
         }
 
         // keyPassword warning - only if sync is enabled
-        const syncEnabled = getConversationsConfig().sync.enabled;
+        const syncEnabled = getConversationsConfig().enableSync;
         if (!this.tokens.keyPassword && syncEnabled) {
             status.warnings.push('keyPassword missing - conversation persistence disabled');
         }
@@ -277,10 +277,10 @@ export class AuthProvider implements IAuthProvider {
     }
 
     /**
-     * Check if sync to Proton servers is supported.
-     * Only browser auth has the lumo scope needed for spaces API.
+     * Check if full API access is supported. (lumo/v1/ endpoints)
+     * Only browser auth has the lumo scope needed
      */
-    supportsSync(): boolean {
+    supportsFullApi(): boolean {
         return this.method === 'browser';
     }
 

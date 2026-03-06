@@ -12,7 +12,7 @@ import { executeCommand, isCommand, type CommandContext } from '../app/commands.
 import { getCliInstructionsConfig, getCommandsConfig, getLocalActionsConfig } from '../app/config.js';
 import logger from '../app/logger.js';
 import { BUSY_INDICATOR, clearBusyIndicator, print } from '../app/terminal.js';
-import type { AppContext } from '../app/types.js';
+import type { Application } from '../app/index.js';
 import { randomUUID } from 'crypto';
 import * as readline from 'readline';
 import type { AssistantMessageData } from '../lumo-client/index.js';
@@ -31,7 +31,7 @@ export class CLIClient {
   private conversationId: string;
   private store;
 
-  constructor(private app: AppContext) {
+  constructor(private app: Application) {
     this.conversationId = randomUUID();
     this.store = app.getConversationStore();
   }

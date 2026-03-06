@@ -27,8 +27,6 @@ import { addSpace } from '@lumo/redux/slices/core/spaces.js';
 import type { Space } from '@lumo/types.js';
 
 export interface MockStoreOptions {
-    /** Max conversations in memory (default: 50) */
-    maxInMemory?: number;
     /** Unique user ID for IDB database naming (default: mock-user-{timestamp}) */
     userId?: string;
     /** Space ID for conversations (default: mock-space-id) */
@@ -52,7 +50,6 @@ export async function initializeMockStore(
     options: MockStoreOptions = {}
 ): Promise<MockStoreResult> {
     const {
-        maxInMemory = 50,
         userId = 'mock-user-' + Date.now(),
         spaceId = 'mock-space-id',
     } = options;
@@ -97,11 +94,7 @@ export async function initializeMockStore(
     store.dispatch(addSpace(mockSpace));
 
     // Create ConversationStore adapter
-    const conversationStore = new ConversationStore(
-        store,
-        spaceId,
-        { maxConversationsInMemory: maxInMemory }
-    );
+    const conversationStore = new ConversationStore(store, spaceId);
 
     // Cleanup function to cancel sagas
     const cleanup = async () => {

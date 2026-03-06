@@ -44,7 +44,7 @@ describe('CLI single-query mode', () => {
   it('runs single query and produces output', async () => {
     const mockApi = createMockProtonApi('success');
     const lumoClient = new LumoClient(mockApi, { enableEncryption: false });
-    const store = new FallbackStore({ maxConversationsInMemory: 10 });
+    const store = new FallbackStore();
 
     const mockApp: AppContext = {
       getLumoClient: () => lumoClient,
