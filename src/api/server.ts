@@ -13,7 +13,7 @@ import { EndpointDependencies } from './types.js';
 import { RequestQueue } from './queue.js';
 import { initMetrics, type MetricsService } from '../app/metrics.js';
 import { createMetricsRouter } from './routes/metrics.js';
-import type { AppContext } from '../app/index.js';
+import type { Application } from '../app/index.js';
 
 export class APIServer {
   private expressApp: express.Application;
@@ -21,7 +21,7 @@ export class APIServer {
   private queue = new RequestQueue(1); // Process one request at a time
   private metrics: MetricsService | null = null;
 
-  constructor(private app: AppContext) {
+  constructor(private app: Application) {
     this.expressApp = express();
     const metricsConfig = getMetricsConfig();
     if (metricsConfig.enabled) {

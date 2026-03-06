@@ -14,9 +14,8 @@ import { getConversationStore, getFallbackStore, setConversationStore, type Conv
 import { createMockProtonApi } from '../mock/mock-api.js';
 import { installFetchAdapter } from '../shims/fetch-adapter.js';
 import { suppressFullApiErrors } from '../shims/console.js';
-import type { AppContext } from './types.js';
 
-export class Application implements AppContext {
+export class Application {
   private lumoClient!: LumoClient;
   private authProvider!: AuthProvider;
   private authManager!: AuthManager;
@@ -162,4 +161,3 @@ export class Application implements AppContext {
   }
 }
 
-export type { AppContext } from './types.js';
