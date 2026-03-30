@@ -6,6 +6,7 @@
 import { logger } from './logger.js';
 import { getCommandsConfig } from './config.js';
 import { getConversationStore } from '../conversations/index.js';
+import { searchConversations, formatSearchResults } from '../conversations/search.js';
 import type { AuthManager } from '../auth/index.js';
 import type { Turn } from '../lumo-client/index.js';
 
@@ -106,6 +107,9 @@ export async function executeCommand(
       case 'load':
         return await handleLoadCommand(params, context);
 
+      case 'search':
+        return handleSearchCommand(params, context);
+
       case 'title':
         return handleTitleCommand(params, context);
 
@@ -143,6 +147,7 @@ function getHelpText(): string {
   /title <text>      - Set conversation title
   /save [title]      - Save stateless request to conversation (optionally set title)
   /load <id>         - Load a conversation from Proton by ID
+  /search <query>    - Search conversation titles and messages
   /refreshtokens     - Manually refresh auth tokens
   /logout            - Revoke session and delete tokens
   /quit              - Exit CLI (CLI mode only)${wakewordHint}`;
@@ -274,6 +279,25 @@ async function handleRefreshTokensCommand(context?: CommandContext): Promise<str
     logger.error({ error }, 'Failed to execute /refreshtokens command');
     return `Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
+}
+
+/**
+ * Handle /search command - search conversations by title and content
+ */
+function handleSearchCommand(params: string, context?: CommandContext): string {
+  const query = params.trim();
+  if (!query) {
+    return 'Usage: /search <query>\nSearches conversation titles and message content.';
+  }
+
+  const store = getConversationStore();
+  if (!store) {
+    return 'Conversation store not available.';
+  }
+
+  // Exclude current conversation from results (it would always be at the top)
+  const results = searchConversations(store, query, 20, context?.conversationId);
+  return formatSearchResults(results, query);
 }
 
 /**
