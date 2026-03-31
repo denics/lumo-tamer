@@ -2,8 +2,7 @@ import { randomUUID } from 'crypto';
 import type { Response } from 'express';
 import { getClientToolsConfig, getServerToolsEnabled } from '../../app/config.js';
 import { getMetrics } from '../../app/metrics';
-import type { CommandContext } from '../../app/commands.js';
-import type { EndpointDependencies, OpenAITool, OpenAIToolCall } from '../types.js';
+import type { EndpointDependencies, OpenAITool, OpenAIToolCall, RequestContext } from '../types.js';
 import type { ConversationId } from '../../conversations/types.js';
 import type { ChatResult, AssistantMessageData } from '../../lumo-client/index.js';
 
@@ -32,14 +31,6 @@ export function mapToolCallsForPersistence(
     arguments: tc.function.arguments,
     call_id: tc.id,
   }));
-}
-
-// ── Request context ────────────────────────────────────────────────
-
-export interface RequestContext {
-  hasCustomTools: boolean;
-  commandContext: CommandContext;
-  requestTitle: boolean;
 }
 
 /**

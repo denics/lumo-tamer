@@ -22,7 +22,7 @@ export {
 
 export { executeServerTool, type ServerToolExecutionResult } from './executor.js';
 
-export { runServerToolLoop, type ServerToolLoopOptions, type ServerToolLoopResult } from './loop.js';
+export { chatAndExecute, type ChatAndExecuteOptions, type ChatAndExecuteResult } from './handler.js';
 
 /**
  * Initialize all built-in ServerTools.

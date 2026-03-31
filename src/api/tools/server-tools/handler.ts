@@ -11,14 +11,14 @@ import { createStreamingToolProcessor, type StreamingToolEmitter } from '../stre
 import { isServerTool, type ServerToolContext } from './registry.js';
 import { partitionToolCalls, buildServerToolContinuation } from './executor.js';
 import type { EndpointDependencies, OpenAIToolCall } from '../../types.js';
-import type { RequestContext } from '../../routes/shared.js';
+import type { RequestContext } from 'src/api/types.js';
 import type { Turn, ChatResult } from '../../../lumo-client/types.js';
 import type { ConversationId } from '../../../conversations/types.js';
 import type { ParsedToolCall } from '../types.js';
 
 // ── Types ─────────────────────────────────────────────────────────────
 
-export interface ServerToolLoopOptions {
+export interface ChatAndExecuteOptions {
   deps: EndpointDependencies;
   context: RequestContext;
   turns: Turn[];
@@ -31,7 +31,7 @@ export interface ServerToolLoopOptions {
   onToolCall: (callId: string, tc: ParsedToolCall) => void;
 }
 
-export interface ServerToolLoopResult {
+export interface ChatAndExecuteResult {
   /** Accumulated text from all iterations */
   accumulatedText: string;
   /** CustomTool calls only (ServerTool calls filtered out) */
@@ -54,7 +54,7 @@ const MAX_SERVER_TOOL_LOOPS = 5;
  * 4. Loops back to Lumo with results (up to MAX_SERVER_TOOL_LOOPS times)
  * 5. Returns final text and any CustomTool calls
  */
-export async function runServerToolLoop(options: ServerToolLoopOptions): Promise<ServerToolLoopResult> {
+export async function chatAndExecute(options: ChatAndExecuteOptions): Promise<ChatAndExecuteResult> {
   const { deps, context, instructions, injectInstructionsInto, onTextDelta, onToolCall } = options;
   const prefix = getCustomToolPrefix();
 

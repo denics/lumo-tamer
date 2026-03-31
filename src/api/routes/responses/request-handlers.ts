@@ -13,7 +13,7 @@ import { ResponseEventEmitter } from './events.js';
 import type { Turn } from '../../../lumo-client/index.js';
 import type { ConversationId } from '../../../conversations/index.js';
 import { generateCallId } from '../../tools/call-id.js';
-import { runServerToolLoop } from '../../tools/server-tools/index.js';
+import { chatAndExecute } from '../../tools/server-tools/index.js';
 import {
   buildRequestContext,
   persistTitle,
@@ -172,7 +172,7 @@ export async function handleRequest(
     let nextOutputIndex = 1;
 
     try {
-      const loopResult = await runServerToolLoop({
+      const loopResult = await chatAndExecute({
         deps,
         context,
         turns,

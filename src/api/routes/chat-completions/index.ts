@@ -9,7 +9,7 @@ import { ChatCompletionEventEmitter } from './events.js';
 import type { Turn } from '../../../lumo-client/index.js';
 import type { ConversationId } from '../../../conversations/types.js';
 import { trackCustomToolCompletion } from '../../tools/call-id.js';
-import { runServerToolLoop } from '../../tools/server-tools/index.js';
+import { chatAndExecute } from '../../tools/server-tools/index.js';
 import {
   buildRequestContext,
   persistTitle,
@@ -160,7 +160,7 @@ async function handleChatRequest(
   } else {
     // Normal flow: call Lumo with TamerTool loop
     try {
-      const loopResult = await runServerToolLoop({
+      const loopResult = await chatAndExecute({
         deps,
         context,
         turns,
