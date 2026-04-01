@@ -3,7 +3,6 @@
  *
  * Provides:
  * - ConversationStore: Primary storage using Redux + IndexedDB
- * - MinimalStore: Lightweight in-memory storage for CLI/tests
  * - Message deduplication for OpenAI API format
  * - Types compatible with Proton Lumo webclient
  */
@@ -23,14 +22,8 @@ export type {
     MessageForStore,
 } from './types.js';
 
-// Store interface
-export type { IConversationStore } from './store-interface.js';
-
 // Primary store
 export { ConversationStore } from './store.js';
-
-// Minimal store (fallback for CLI/tests)
-export { MinimalStore } from './minimal-store.js';
 
 // Store initialization
 export {
@@ -68,7 +61,7 @@ import type { AuthProvider, ProtonApi } from '../auth/index.js';
 import type { ConversationsConfig } from '../app/config.js';
 import { getKeyManager } from './key-manager.js';
 import { initializeStore, pullIncompleteConversations, type StoreResult } from './init.js';
-import type { IConversationStore } from './store-interface.js';
+import { ConversationStore } from './store.js';
 
 // ============================================================================
 // Conversation Store Initialization
@@ -92,14 +85,14 @@ export interface InitializeStoreResult {
 let primaryStoreResult: StoreResult | null = null;
 
 // Singleton for the active store
-let activeStore: IConversationStore | null = null;
+let activeStore: ConversationStore | null = null;
 
 /**
  * Initialize the conversation store
  *
  * Creates the primary ConversationStore (Redux + IndexedDB) if possible.
  * Returns undefined if initialization fails - callers should handle this
- * gracefully (server works stateless, CLI creates MinimalStore).
+ * gracefully (server works stateless, CLI uses local Turn array).
  *
  * Primary store requires:
  * - Auth provider supports persistence (has cached encryption keys)
@@ -193,14 +186,14 @@ async function initializePrimaryStore(
  * Returns the initialized store, or undefined if no store is available.
  * Callers should handle undefined gracefully (stateless mode).
  */
-export function getConversationStore(): IConversationStore | undefined {
+export function getConversationStore(): ConversationStore | undefined {
     return activeStore ?? undefined;
 }
 
 /**
  * Set the active conversation store (for mock mode or CLI fallback)
  */
-export function setConversationStore(store: IConversationStore): void {
+export function setConversationStore(store: ConversationStore): void {
     activeStore = store;
 }
 

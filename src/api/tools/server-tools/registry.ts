@@ -6,14 +6,14 @@
  */
 
 import { OpenAITool } from 'src/api/types.js';
-import type { IConversationStore } from '../../../conversations/index.js';
+import type { ConversationStore } from '../../../conversations/index.js';
 import type { ConversationId } from '../../../conversations/types.js';
 
 // ── Types ─────────────────────────────────────────────────────────────
 
 /** Context passed to ServerTool handlers. */
 export interface ServerToolContext {
-  conversationStore?: IConversationStore;
+  conversationStore?: ConversationStore;
   conversationId?: ConversationId;
 }
 

@@ -8,7 +8,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { LumoClient } from '../../src/lumo-client/index.js';
 import { createMockProtonApi } from '../../src/mock/mock-api.js';
-import { MinimalStore } from '../../src/conversations/index.js';
 import type { Application } from '../../src/app/index.js';
 
 describe('CLI single-query mode', () => {
@@ -44,11 +43,10 @@ describe('CLI single-query mode', () => {
   it('runs single query and produces output', async () => {
     const mockApi = createMockProtonApi('success');
     const lumoClient = new LumoClient(mockApi, { enableEncryption: false });
-    const store = new MinimalStore();
 
     const mockApp: Application = {
       getLumoClient: () => lumoClient,
-      getConversationStore: () => store,
+      getConversationStore: () => undefined,
       getAuthProvider: () => undefined,
       getAuthManager: () => undefined,
       isSyncInitialized: () => false,

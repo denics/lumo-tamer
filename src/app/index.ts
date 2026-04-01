@@ -10,7 +10,7 @@ import { logger } from './logger.js';
 import { resolveProjectPath } from './paths.js';
 import { LumoClient } from '../lumo-client/index.js';
 import { createAuthProvider, AuthManager, type AuthProvider, type ProtonApi } from '../auth/index.js';
-import { getConversationStore, setConversationStore, initializeSync, initializeConversationStore, type IConversationStore } from '../conversations/index.js';
+import { getConversationStore, setConversationStore, initializeSync, initializeConversationStore, type ConversationStore } from '../conversations/index.js';
 import { createMockProtonApi } from '../mock/mock-api.js';
 import { installFetchAdapter } from '../shims/fetch-adapter.js';
 import { suppressFullApiErrors } from '../shims/console.js';
@@ -132,7 +132,7 @@ export class Application {
     return this.lumoClient;
   }
 
-  getConversationStore(): IConversationStore | undefined {
+  getConversationStore(): ConversationStore | undefined {
     return getConversationStore();
   }
 

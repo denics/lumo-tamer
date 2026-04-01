@@ -15,11 +15,11 @@ import { BUSY_INDICATOR, clearBusyIndicator, print } from '../app/terminal.js';
 import type { Application } from '../app/index.js';
 import { randomUUID } from 'crypto';
 import * as readline from 'readline';
-import type { AssistantMessageData } from '../lumo-client/index.js';
+import type { AssistantMessageData, Turn } from '../lumo-client/index.js';
+import type { ConversationStore } from '../conversations/index.js';
 import { blockHandlers, executeBlocks, formatResultsMessage } from './local-actions/block-handlers.js';
 import { CodeBlockDetector, type CodeBlock } from './local-actions/code-block-detector.js';
 import { buildCliInstructions } from './message-converter.js';
-import { MinimalStore, type IConversationStore } from '../conversations/index.js';
 
 interface LumoResponse {
   /** Assistant message data ready for persistence */
@@ -29,13 +29,13 @@ interface LumoResponse {
 }
 
 export class CLIClient {
-  private conversationId: string;
-  private store: IConversationStore;
+  private conversationId = randomUUID();
+  private turns: Turn[] = [];
+  private store?: ConversationStore;
 
   constructor(private app: Application) {
-    this.conversationId = randomUUID();
-    // Use app store if available, otherwise create minimal in-memory store
-    this.store = app.getConversationStore() ?? new MinimalStore();
+    this.store = app.getConversationStore();
+
   }
 
   async run(): Promise<void> {
@@ -64,7 +64,7 @@ export class CLIClient {
 
     print('Lumo: ' + BUSY_INDICATOR, false);
 
-    const turns = this.store.toTurns(this.conversationId);
+    const turns = this.store?.toTurns(this.conversationId) ?? this.turns;
     const instructions = buildCliInstructions();
     const { injectInto } = getCliInstructionsConfig();
     const result = await this.app.getLumoClient().chatWithHistory(
@@ -94,9 +94,8 @@ export class CLIClient {
     }
     print('\n');
 
-    // Handle title (already processed by LumoClient)
     if (result.title) {
-      this.store.setTitle(this.conversationId, result.title);
+      this.store?.setTitle(this.conversationId, result.title);
     }
 
     return {
@@ -217,15 +216,12 @@ export class CLIClient {
     }
 
     try {
-      // Append user message and get response
-      this.store.appendUserMessage(this.conversationId, input);
+      this.turns.push({ role: 'user', content: input });
+      this.store?.appendUserMessage(this.conversationId, input);
 
-      // Request title for new conversations (first message)
-      const existingConv = this.store.get(this.conversationId);
-      const requestTitle = existingConv?.title === 'New Conversation';
-
-      let lumoResponse = await this.sendToLumo({ requestTitle });
-      this.store.appendAssistantResponse(this.conversationId, lumoResponse.message);
+      let lumoResponse = await this.sendToLumo();
+      this.turns.push({ role: 'assistant', content: lumoResponse.message.content });
+      this.store?.appendAssistantResponse(this.conversationId, lumoResponse.message);
 
       // Execute blocks until none remain (or user skips all)
       while (lumoResponse.blocks.length > 0) {
@@ -236,10 +232,12 @@ export class CLIClient {
         // Send batch results back to Lumo
         print('─── Sending results to Lumo ───\n');
         const batchMessage = formatResultsMessage(results);
-        this.store.appendUserMessage(this.conversationId, batchMessage);
+        this.turns.push({ role: 'user', content: batchMessage });
+        this.store?.appendUserMessage(this.conversationId, batchMessage);
 
         lumoResponse = await this.sendToLumo();
-        this.store.appendAssistantResponse(this.conversationId, lumoResponse.message);
+        this.turns.push({ role: 'assistant', content: lumoResponse.message.content });
+        this.store?.appendAssistantResponse(this.conversationId, lumoResponse.message);
       }
     } catch (error) {
       clearBusyIndicator();

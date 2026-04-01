@@ -8,29 +8,15 @@ import {
     formatSearchResults,
     type SearchResult,
 } from '../../src/conversations/search.js';
-import type { IConversationStore } from '../../src/conversations/store-interface.js';
+import type { ConversationStore } from '../../src/conversations/index.js';
 import type { ConversationId, ConversationState, Message } from '../../src/conversations/types.js';
 
 /**
  * Create a mock store with test conversations
  */
-function createMockStore(conversations: Map<ConversationId, ConversationState>): IConversationStore {
+function createMockStore(conversations: Map<ConversationId, ConversationState>): Pick<ConversationStore, 'entries'> {
     return {
         entries: () => conversations.entries(),
-        // Other methods not needed for search tests
-        get: () => undefined,
-        getOrCreate: () => { throw new Error('not implemented'); },
-        has: () => false,
-        delete: () => false,
-        appendMessages: () => [],
-        appendAssistantResponse: () => { throw new Error('not implemented'); },
-        appendUserMessage: () => { throw new Error('not implemented'); },
-        appendAssistantToolCalls: () => {},
-        getMessages: () => [],
-        getMessage: () => undefined,
-        setTitle: () => {},
-        toTurns: () => [],
-        createFromTurns: () => { throw new Error('not implemented'); },
     };
 }
 

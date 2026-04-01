@@ -5,7 +5,7 @@
  * Snippet extraction inspired by WebClients searchService.ts.
  */
 
-import type { IConversationStore } from './store-interface.js';
+import type { ConversationStore } from './store.js';
 import type { ConversationId, Message } from './types.js';
 
 export interface SearchResult {
@@ -26,7 +26,7 @@ export interface SearchResult {
  * @returns Array of matching conversations, sorted by most recent first
  */
 export function searchConversations(
-    store: IConversationStore,
+    store: Pick<ConversationStore, 'entries'>,
     query: string,
     limit = 20,
     excludeId?: ConversationId
