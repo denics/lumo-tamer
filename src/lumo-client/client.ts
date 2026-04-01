@@ -334,7 +334,10 @@ export class LumoClient {
                 { role: Role.User, content: bounceInstruction },
             ];
 
-            return this.chatWithHistory(bounceTurns, onChunk, options, true);
+            return {
+                ...this.chatWithHistory(bounceTurns, onChunk, options, true),
+                title: result.title ? postProcessTitle(result.title) : undefined,
+            };
         }
 
         // Post-process title (remove quotes, trim, limit length)
