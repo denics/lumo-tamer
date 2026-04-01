@@ -6,6 +6,7 @@
  */
 
 import { registerServerTool } from './registry.js';
+import { dateServerTool } from './date.js';
 import { searchServerTool } from './search.js';
 
 // Re-export types and functions
@@ -29,5 +30,6 @@ export { chatAndExecute, type ChatAndExecuteOptions, type ChatAndExecuteResult }
  * Called during server startup when enableServerTools is true.
  */
 export function initializeServerTools(): void {
+  registerServerTool(dateServerTool);
   registerServerTool(searchServerTool);
 }
