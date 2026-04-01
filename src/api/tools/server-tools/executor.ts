@@ -6,6 +6,7 @@
  */
 
 import { logger } from '../../../app/logger.js';
+import { getMetrics } from '../../../app/metrics.js';
 import { getServerTool, isServerTool, type ServerToolContext } from './registry.js';
 import type { OpenAIToolCall } from '../../types.js';
 import { Role } from '../../../lumo-client/types.js';
@@ -51,10 +52,12 @@ export async function executeServerTool(
     logger.info({ tool: toolName, args }, 'Executing ServerTool');
     const result = await tool.handler(args, context);
     logger.debug({ tool: toolName, resultLength: result.length }, 'ServerTool completed');
+    getMetrics()?.toolCallsTotal.inc({ type: 'server', status: 'success', tool_name: toolName });
     return { isServerTool: true, result };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error({ error, tool: toolName }, 'ServerTool execution failed');
+    getMetrics()?.toolCallsTotal.inc({ type: 'server', status: 'failed', tool_name: toolName });
     return { isServerTool: true, error: errorMessage };
   }
 }

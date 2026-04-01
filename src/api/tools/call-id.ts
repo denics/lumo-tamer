@@ -52,7 +52,7 @@ export function trackCustomToolCompletion(callId: string): void {
 
   logger.info({ toolName, call_id: callId }, 'Custom tool call completed');
   getMetrics()?.toolCallsTotal.inc({
-    type: 'custom',
+    type: 'client',
     status: 'completed',
     tool_name: toolName,
   });
