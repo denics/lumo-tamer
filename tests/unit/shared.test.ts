@@ -18,7 +18,8 @@ import {
 } from '../../src/api/tools/server-tools/registry.js';
 import {
   partitionToolCalls,
-  buildServerToolContinuation,
+  executeServerTools,
+  buildContinuationTurns,
 } from '../../src/api/tools/server-tools/executor.js';
 import { Role } from '../../src/lumo-client/types.js';
 import { generateCallId, extractToolNameFromCallId } from '../../src/api/tools/call-id.js';
@@ -148,7 +149,7 @@ describe('partitionToolCalls', () => {
   });
 });
 
-describe('buildServerToolContinuation', () => {
+describe('executeServerTools + buildContinuationTurns', () => {
   beforeEach(() => {
     clearServerTools();
   });
@@ -168,7 +169,8 @@ describe('buildServerToolContinuation', () => {
     ];
 
     const context: ServerToolContext = {};
-    const turns = await buildServerToolContinuation(serverToolCalls, 'Assistant text', context, 'user:');
+    const results = await executeServerTools(serverToolCalls, context);
+    const turns = buildContinuationTurns('Assistant text', results, 'user:');
 
     expect(turns).toHaveLength(2);
 
@@ -204,7 +206,8 @@ describe('buildServerToolContinuation', () => {
       { id: 'call-b', type: 'function' as const, function: { name: 'tool_b', arguments: '{}' } },
     ];
 
-    const turns = await buildServerToolContinuation(serverToolCalls, 'Text', {}, 'prefix:');
+    const results = await executeServerTools(serverToolCalls, {});
+    const turns = buildContinuationTurns('Text', results, 'prefix:');
 
     // 1 assistant + 2 user turns
     expect(turns).toHaveLength(3);
@@ -231,7 +234,8 @@ describe('buildServerToolContinuation', () => {
       { id: 'call-fail', type: 'function' as const, function: { name: 'failing_tool', arguments: '{}' } },
     ];
 
-    const turns = await buildServerToolContinuation(serverToolCalls, 'Text', {}, 'user:');
+    const results = await executeServerTools(serverToolCalls, {});
+    const turns = buildContinuationTurns('Text', results, 'user:');
 
     expect(turns).toHaveLength(2);
     expect(turns[1].content).toContain('Error executing failing_tool');
@@ -251,7 +255,8 @@ describe('buildServerToolContinuation', () => {
       { id: 'call-1', type: 'function' as const, function: { name: 'my_tool', arguments: '{}' } },
     ];
 
-    const turns = await buildServerToolContinuation(serverToolCalls, 'Text', {}, 'custom:');
+    const results = await executeServerTools(serverToolCalls, {});
+    const turns = buildContinuationTurns('Text', results, 'custom:');
 
     const content = turns[1].content;
     expect(content).toContain('"tool_name":"custom:my_tool"');
