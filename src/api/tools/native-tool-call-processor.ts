@@ -15,7 +15,7 @@
 
 import { JsonBraceTracker } from './json-brace-tracker.js';
 import { stripToolPrefix } from './prefix.js';
-import { getCustomToolPrefix } from '../../app/config.js';
+import { getConfigMode, getCustomToolPrefix } from '../../app/config.js';
 import { getMetrics } from '../../app/metrics.js';
 import { logger } from '../../app/logger.js';
 import type { ParsedToolCall } from './types.js';
@@ -115,7 +115,9 @@ export class NativeToolCallProcessor {
       }
 
       if (this.isMisrouted(toolCall)) {
-        const strippedName = stripToolPrefix(toolCall.name, getCustomToolPrefix());
+        // Only strip prefix in server mode (CLI has no tool prefix concept)
+        const prefix = getConfigMode() === 'server' ? getCustomToolPrefix() : '';
+        const strippedName = stripToolPrefix(toolCall.name, prefix);
         getMetrics()?.toolCallsTotal.inc({
           type: 'custom', status: 'misrouted', tool_name: strippedName
         });
