@@ -8,6 +8,7 @@
 import { registerServerTool } from './registry.js';
 import { dateServerTool } from './date.js';
 import { searchServerTool } from './search.js';
+import { readConversationServerTool } from './read-conversation.js';
 
 // Re-export types and functions
 export {
@@ -36,7 +37,7 @@ export { chatAndExecute, type ChatAndExecuteOptions, type ChatAndExecuteResult }
  * Called during server startup when enableServerTools is true.
  */
 export function initializeServerTools(): void {
-  const tools = [dateServerTool, searchServerTool];
+  const tools = [dateServerTool, searchServerTool, readConversationServerTool];
   for (const tool of tools) {
     if (tool.isAvailable === undefined || tool.isAvailable()) {
       registerServerTool(tool);

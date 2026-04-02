@@ -169,7 +169,7 @@ export function formatSearchResults(results: SearchResult[], query: string): str
         lines.push('');
     }
 
-    lines.push('Use /load <id> to open a conversation');
+    // lines.push('Use /load <id> to open a conversation');
 
     return lines.join('\n');
 }
