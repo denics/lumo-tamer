@@ -62,14 +62,11 @@ log:
   messageContent: false
 
 # Shared Conversations Configuration (can be overridden in server/cli sections)
-# Note: In-memory conversation storage is always active regardless of sync settings
-# - do they still work/make sense with upstream store?
-# - can they still be overwritten for cli/server? (ie. overwriting dbpath doesn't make sense if sync enabled, does it otherwise?)
 conversations:
-  # Path for IndexedDB SQLite files (used when useUpstreamStorage is true)
+  # Path for IndexedDB SQLite files
   databasePath: "sessions/"
 
-  # WORKAROUND for clients without conversation_id support (e.g., Home Assistant).
+  # WORKAROUND for API clients without conversation_id support (e.g., Home Assistant).
   # Derives conversation ID from the `user` field in the request.
   # Home Assistant sends its internal conversation_id as user, making it unique per chat session.
   # WARNING: May incorrectly merge unrelated conversations with same "user" field. Ignored if `user` is absent.
@@ -79,6 +76,10 @@ conversations:
   enableSync: false
   # Project name for conversations (created if doesn't exist)
   projectName: lumo-tamer
+
+  # Enable ConversationStore for conversation persistence
+  # When disabled, conversations are not persisted (same as when encryption keys unavailable)
+  enableStore: true
 
 # Shared Commands Configuration (can be overridden in server/cli sections)
 commands:

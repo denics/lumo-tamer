@@ -101,7 +101,13 @@ let activeStore: ConversationStore | null = null;
 export async function initializeConversationStore(
     options: InitializeStoreOptions
 ): Promise<InitializeStoreResult> {
-    const { authProvider } = options;
+    const { authProvider, conversationsConfig } = options;
+
+    // Check if store is disabled via config
+    if (!conversationsConfig.enableStore) {
+        logger.info('ConversationStore disabled via config');
+        return { isPrimary: false };
+    }
 
     // Check if ConversationStore can be used
     const storeWarning = authProvider.getConversationStoreWarning();
