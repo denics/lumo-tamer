@@ -104,9 +104,6 @@ export async function executeCommand(
       case 'save':
         return await handleSaveCommand(params, context);
 
-      case 'load':
-        return await handleLoadCommand(params, context);
-
       case 'search':
         return handleSearchCommand(params, context);
 
@@ -146,7 +143,6 @@ function getHelpText(): string {
   /help              - Show this help message
   /title <text>      - Set conversation title
   /save [title]      - Save stateless request to conversation (optionally set title)
-  /load <id>         - Load a conversation from Proton by ID
   /search <query>    - Search conversation titles and messages
   /refreshtokens     - Manually refresh auth tokens
   /logout            - Revoke session and delete tokens
@@ -228,39 +224,6 @@ async function handleSaveCommand(params: string, context?: CommandContext): Prom
   } catch (error) {
     logger.error({ error }, 'Failed to execute /save command');
     return `Save failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
-  }
-}
-
-/**
- * Handle /load command - load a conversation by ID
- *
- * With the primary store, conversations are loaded from IndexedDB automatically.
- * This command provides info about an existing conversation.
- */
-async function handleLoadCommand(params: string, context?: CommandContext): Promise<string> {
-  try {
-    const localId = params.trim();
-    if (!localId) {
-      return 'Usage: /load <id>\nExample: /load f0654976-d628-4516-8e80-a0599b6593ac';
-    }
-
-    const store = getConversationStore();
-    if (!store) {
-      return 'Conversation store not available.';
-    }
-
-    const conversation = store.get(localId);
-    if (!conversation) {
-      return `Conversation not found: ${localId}`;
-    }
-
-    const messageCount = conversation.messages.length ?? 0;
-    const title = conversation.title ?? 'Untitled';
-
-    return `Loaded conversation: ${title}\nLocal ID: ${localId}\nMessages: ${messageCount}`;
-  } catch (error) {
-    logger.error({ error }, 'Failed to execute /load command');
-    return `Load failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
 }
 
