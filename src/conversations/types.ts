@@ -73,13 +73,3 @@ export interface InitializeStoreOptions {
     authProvider: AuthProvider;
     conversationsConfig: ConversationsConfig;
 }
-
-/**
- * Options for initializing sync services
- */
-export interface InitializeSyncOptions {
-    protonApi: ProtonApi;
-    uid: string;
-    authProvider: AuthProvider;
-    conversationsConfig: ConversationsConfig;
-}

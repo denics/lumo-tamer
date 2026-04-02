@@ -10,7 +10,7 @@ import { logger } from './logger.js';
 import { resolveProjectPath } from './paths.js';
 import { LumoClient } from '../lumo-client/index.js';
 import { createAuthProvider, AuthManager, type AuthProvider, type ProtonApi } from '../auth/index.js';
-import { getConversationStore, setConversationStore, initializeSync, initializeConversationStore, type ConversationStore } from '../conversations/index.js';
+import { getConversationStore, setConversationStore, initializeConversationStore, type ConversationStore } from '../conversations/index.js';
 import { createMockProtonApi } from '../mock/mock-api.js';
 import { installFetchAdapter } from '../shims/fetch-adapter.js';
 import { suppressFullApiErrors } from '../shims/console.js';
@@ -34,7 +34,6 @@ export class Application {
     } else {
       await app.initializeAuth();
       await app.initializeStore();
-      app.initializeSync();
     }
     return app;
   }
@@ -111,19 +110,9 @@ export class Application {
       authProvider: this.authProvider,
       conversationsConfig,
     });
-  }
 
-  /**
-   * Initialize sync service for conversation persistence
-   */
-  private initializeSync(): void {
-    const conversationsConfig = getConversationsConfig();
-    this.syncInitialized = initializeSync({
-      protonApi: this.protonApi,
-      uid: this.uid,
-      authProvider: this.authProvider,
-      conversationsConfig,
-    });
+    // Sync is enabled if config allows and auth provider supports it
+    this.syncInitialized = conversationsConfig.enableSync && !this.authProvider.getSyncWarning();
   }
 
   // AppContext implementation
