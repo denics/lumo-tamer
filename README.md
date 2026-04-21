@@ -310,11 +310,11 @@ To test an API client, increase log levels on both the client and lumo-tamer: `s
 Please share your experiences with new API clients (both issues and successes) in [the project discussions](https://github.com/ZeroTricks/lumo-tamer/discussions/new?category=general)!
 
 
-### Docker
+## Docker
 
 It is recommended to run lumo-tamer's server in a Docker container.
 
-#### Install
+### Install
 
 ```bash
 git clone https://github.com/ZeroTricks/lumo-tamer.git
@@ -326,7 +326,7 @@ openssl rand -base64 32 > secrets/lumo-vault-key
 chmod 600 secrets/lumo-vault-key
 ```
 
-#### Configure
+### Configure
 
 Create `config.yaml`:
 
@@ -337,7 +337,7 @@ server:
 
 > **Security:** Keep your API key private and make sure lumo-tamer is only accessible from your local network, not the internet. Disable docker port forwarding if API clients belong to the same docker network.
 
-#### Authenticate
+### Authenticate
 
 ```bash
 docker compose run --rm -it tamer auth login
@@ -357,7 +357,7 @@ Log in to Proton in a regular browser from the same IP first. This often clears 
 Proton's security model doesn't allow for a simple OAuth authentication. Your credentials are not saved or logged, and security tokens are stored encrypted. [Read further](docs/authentication.md#security) for more information or other authentication methods.
 </details>
 
-#### Run
+### Run
 Server:
 ```bash
 docker compose up tamer # starts server by default
