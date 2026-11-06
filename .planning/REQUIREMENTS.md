@@ -57,8 +57,23 @@ Deferred to a future milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmap) | | |
+| REL-01 | Phase 1 | Pending |
+| REL-02 | Phase 1 | Pending |
+| REL-03 | Phase 2 | Pending |
+| REL-04 | Phase 3 | Pending |
+| REL-05 | Phase 4 | Pending |
+| REL-06 | Phase 5 | Pending |
+| API-01 | Phase 6 | Pending |
+| API-02 | Phase 7 | Pending |
+| CORR-01 | Phase 8 | Pending |
+| CORR-02 | Phase 9 | Pending |
+| CORR-03 | Phase 10 | Pending |
+| CORR-04 | Phase 11 | Pending |
+| MAINT-01 | Phase 12 | Pending |
+| MAINT-02 | Phase 13 | Pending |
+
+**Coverage:** 14/14 v1 requirements mapped, no orphans, no duplicates.
 
 ---
 *Requirements defined: 2026-11-06*
-*Last updated: 2026-11-06 after initial definition*
+*Last updated: 2026-11-06 after roadmap creation*
